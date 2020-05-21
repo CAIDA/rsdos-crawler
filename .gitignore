@@ -1,0 +1,27 @@
+# Jet Brains #
+##############
+.idea/
+
+# Jupyter #
+###########
+.ipynb_checkpoints
+
+# Environment #
+###############
+env/
+*.env
+
+# Data #
+########
+data/
+*.dat
+
+# Log #
+########
+log/
+*.log
+
+# Byte-compiled optimized DLL files #
+#####################################
+__pycache__/
+*.py[cod]
