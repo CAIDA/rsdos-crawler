@@ -20,7 +20,7 @@ from warcio.statusandheaders import StatusAndHeaders
 from doscrawler.targets import Target
 
 
-@task(bind=True, queue="doscrawler.resolve_target")
+@task(bind=True)
 def resolve_target(self, ip=None, file=None):
     """
     Task to resolve target's host names
@@ -54,7 +54,7 @@ def resolve_target(self, ip=None, file=None):
     return target.ip, target.hosts
 
 
-@task(bind=True, queue="doscrawler.map_hosts")
+@task(bind=True)
 def map_hosts(self, target, callback):
     """
     Task to map each target's host name to a separate crawl
@@ -82,7 +82,7 @@ def map_hosts(self, target, callback):
     return crawl_hosts
 
 
-@task(bind=True, queue="doscrawler.crawl_host", autoretry_for=(requests.exceptions.RequestException,), retry_backoff=5, max_retries=2, soft_time_limit=20)
+@task(bind=True)
 def crawl_host(self, host):
     """
     Task to crawl host name
@@ -110,33 +110,32 @@ def crawl_host(self, host):
     response = requests.get(host_schema, timeout=10)
 
     # check status of response
-    response.raise_for_status()
+    #response.raise_for_status()
 
     # log summary of crawl on success
     logger.info("Crawled for target at IP address {} its resolved host {} with status code {}".format(ip, host, response.status_code))
 
-    # define file name
-    file_dir = os.path.join("data/", "warc_{}.warc.gz".format(host))
-
-    # if self.request.retries > 0:
-
-    with open(file_dir, "wb") as file:
-        # prepare writer (directly in file --> should be first in memory)
-        writer = WARCWriter(file, gzip=True)
-        # prepare http header resp.raw.headers.items()
-        #StatusAndHeaders(statusline=statusline,
-        #                 headers=headers,
-        #                 protocol=protocol_status[0],
-        #                 total_len=total_read)
-        # create request # record type = response / revisit / request
-        req = writer.create_warc_record(uri=host, record_type="request")
-        # create response
-        resp = writer.create_warc_record(uri=host, record_type="response", payload=StringIO(response.text))
-        # write
-        writer.write_request_response_pair(req=req, resp=resp, params=None)
-
-    # log summary of save on success
-    logger.info("Saved for target at IP address {} its resolved host {} in file {}".format(ip, host, file_dir))
+    ## define file name
+    #file_dir = os.path.join("data/", "warc_{}.warc.gz".format(host))
+    #
+    ## if self.request.retries > 0:
+    #with open(file_dir, "wb") as file:
+    #    # prepare writer (directly in file --> should be first in memory)
+    #    writer = WARCWriter(file, gzip=True)
+    #    # prepare http header resp.raw.headers.items()
+    #    #StatusAndHeaders(statusline=statusline,
+    #    #                 headers=headers,
+    #    #                 protocol=protocol_status[0],
+    #    #                 total_len=total_read)
+    #    # create request # record type = response / revisit / request
+    #    req = writer.create_warc_record(uri=host, record_type="request")
+    #    # create response
+    #    resp = writer.create_warc_record(uri=host, record_type="response", payload=StringIO(response.text))
+    #    # write
+    #    writer.write_request_response_pair(req=req, resp=resp, params=None)
+    #
+    ## log summary of save on success
+    #logger.info("Saved for target at IP address {} its resolved host {} in file {}".format(ip, host, file_dir))
 
     return host, response.status_code, response.text
 

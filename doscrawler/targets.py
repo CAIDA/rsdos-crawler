@@ -8,15 +8,13 @@ Targets
 
 This module provides the functionalities together with targets in the DoS crawler.
 
+NOTE: The target iterator is only temporary, because later IP addresses should be sent directly.
+
 """
 
 import socket
 import random
 
-
-######################################################################
-# TODO: replace IP address iterator by actual stream of IP addresses #
-######################################################################
 
 class TargetIterator(object):
     """

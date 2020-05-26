@@ -76,7 +76,7 @@ class Dump(object):
         # filter containers on exact time
         containers_timestamps = [re.search(r"\b\d{10}\b", container) for container in containers]
         containers_datetimes = [datetime.datetime.utcfromtimestamp(int(timestamp.group(0))) if timestamp else None for timestamp in containers_timestamps]
-        containers_filter = [True if time and start <= time <= end else False for time in containers_datetimes]
+        containers_filter = [True if time and start <= time < end else False for time in containers_datetimes]
         containers = list(compress(containers, containers_filter))
 
         # collect ips
