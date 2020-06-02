@@ -11,6 +11,7 @@ This module provides an example for the DoS crawler.
 """
 
 from celery import chain
+from doscrawler.dumps import Dump
 from doscrawler.tasks import resolve_target, crawl_host, map_hosts
 
 
@@ -20,8 +21,9 @@ from doscrawler.tasks import resolve_target, crawl_host, map_hosts
 #   job.apply_async()
 
 # create job with single random ip
-job = chain(resolve_target.signature(kwargs={"file": "data/example_hosts.txt"}), map_hosts.s(crawl_host.s()))
-job.apply_async()
+for _ in range(100):
+    job = chain(resolve_target.signature(kwargs={"file": "data/example_hosts.txt"}), map_hosts.s(crawl_host.s()))
+    job.apply_async()
 
 # create job with single deterministic ip
 #job = chain(resolve_target.signature(kwargs={"ip": "172.217.23.99"}), map_hosts.s(crawl_host.s()))

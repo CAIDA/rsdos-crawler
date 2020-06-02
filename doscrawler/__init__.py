@@ -10,8 +10,6 @@ This module initializes the DoS crawler.
 
 """
 
-__all__ = ["app"]
+__all__ = []
 __author__ = "Stefan Scholz <stefan.scholz@uni.kn>"
 __version__ = "0.1"
-
-from .celery import app

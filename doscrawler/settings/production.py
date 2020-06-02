@@ -3,8 +3,8 @@
 
 """
 
-Production Configuration
-------------------------
+Production
+----------
 
 This module defines the production configuration of the DoS crawler.
 
