@@ -66,7 +66,7 @@ mv kafka_2.12-2.5.0 /usr/local/kafka
 
 ```bash
 # install dependencies 
-apt install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev libzstd-dev#
+apt install libgflags-dev libsnappy-dev zlib1g-dev libbz2-dev libzstd-dev
 
 # clone repository
 git clone https://github.com/facebook/rocksdb.git

@@ -10,7 +10,7 @@ This module defines the development settings of the DoS crawler.
 
 """
 
-import datetime
+from pytz import timezone
 from logging.config import dictConfig
 
 
@@ -22,9 +22,9 @@ CACHE = "memory://"
 
 PROCESSING_GUARANTEE = "at_least_once"
 ORIGIN = "doscrawler.app"
-AUTODISCOVER = True
-TIMEZONE = datetime.timezone.utc
-DATADIR = "data/app-{app.conf.id}"
+AUTODISCOVER = ["doscrawler.containers", "doscrawler.objects"] #True
+TIMEZONE = timezone("US/Pacific")
+DATADIR = "data/app"
 
 LOGGING = dictConfig(
     {
@@ -70,3 +70,9 @@ WORKER_REDIRECT_STDOUTS_LEVEL = "INFO"
 
 WEB_PORT = 6066
 WEB_IN_THREAD = True
+
+CONTAINER_GET_OBJECTS_TIMER = 60
+CONTAINER_GET_OBJECTS_INTERVAL = 7200 # 2 hours
+
+OBJECT_RETENTION_INTERVAL = 604800 # 7 days
+TARGETLINE_RETENTION_INTERVAL = 604800 # 7 days

@@ -60,7 +60,7 @@ def configure(app, conf, **kwargs):
     conf.table_key_index_size = settings.TABLE_KEY_INDEX_SIZE
     conf.stream_buffer_maxsize = settings.STREAM_BUFFER_MAXSIZE
     conf.worker_redirect_stdouts = settings.WORKER_REDIRECT_STDOUTS
-    conf.worker_redirect_stdouts_level = settings.WORKER_REDIRECTS_STDOUTS_LEVEL
+    conf.worker_redirect_stdouts_level = settings.WORKER_REDIRECT_STDOUTS_LEVEL
     conf.web_port = settings.WEB_PORT
     conf.web_in_thread = settings.WEB_IN_THREAD
 

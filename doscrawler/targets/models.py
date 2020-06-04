@@ -13,12 +13,11 @@ This module defines the models of the targets for the DoS crawler.
 from faust import Record
 from typing import List, Dict
 from datetime import datetime
-from dateutil.parser import parse as parse_date
 from doscrawler.crawls.models import Crawl
 from doscrawler.hosts.models import Host
 
 
-class TargetLine(Record, coerce=True, date_parser=parse_date):
+class TargetLine(Record, coerce=True, serializer="json"):
     """
     Target line model class
     """
