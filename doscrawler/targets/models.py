@@ -32,8 +32,8 @@ class TargetLine(Record, coerce=True, serializer="json"):
     nr_bytes: int
     nr_bytes_in_interval: int
     max_ppm: int
-    start_posix_time: datetime
-    latest_posix_time: datetime
+    start_time: datetime
+    latest_time: datetime
     start_corsaro_interval: datetime
 
 
@@ -43,9 +43,9 @@ class Target(Record):
     """
 
     ip: str
-    start: str
+    start: datetime
     target_lines: List[TargetLine]
-    hosts: Dict[Host, List[Crawl]]
+    hosts: Dict[Host, List[Crawl]] = {}
 
 
 ########################################################################

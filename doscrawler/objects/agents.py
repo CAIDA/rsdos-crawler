@@ -19,7 +19,7 @@ from doscrawler.targets.topics import targetline_topic
 
 
 @app.agent(object_topic)
-async def get_targetlines_from_object(objects):
+async def get_targetlines_from_objects(objects):
     """
     Process target lines from object
 
@@ -60,4 +60,5 @@ async def get_targetlines_from_object(objects):
 #####################################
 # TODO:                             #
 #   - make table changelog of topic #
+#   - consider need for concurrency #
 #####################################

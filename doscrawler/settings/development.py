@@ -38,7 +38,7 @@ LOGGING = dictConfig(
 KEY_SERIALIZER = "raw" # "json" maybe not URL-safe because of encoding
 VALUE_SERIALIZER = "json" #
 
-TOPIC_PARTITIONS = 8 # defines maximum number of workers
+TOPIC_PARTITIONS = 1 # defines maximum number of workers should be equal to num.partitions=8 in /usr/local/kafka/config/server.properties
 TOPIC_DISABLE_LEADER = False
 
 BROKER_COMMIT_EVERY = 10000
@@ -75,4 +75,4 @@ CONTAINER_GET_OBJECTS_TIMER = 60
 CONTAINER_GET_OBJECTS_INTERVAL = 7200 # 2 hours
 
 OBJECT_RETENTION_INTERVAL = 604800 # 7 days
-TARGETLINE_RETENTION_INTERVAL = 604800 # 7 days
+RETENTION_INTERVAL = 604800 # 7 days

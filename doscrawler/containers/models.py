@@ -54,7 +54,7 @@ class Container(Record):
         # get objects with list filter
         args = f"swift list {self.name} {list_filter}"
         process = Popen(args=args, stdout=PIPE, shell=True)
-        names = [line.decode("utf-8").strip() for line in process.stdout]
+        object_names = [line.decode("utf-8").strip() for line in process.stdout]
 
         # get static objects for testing
         #names = [
@@ -63,7 +63,7 @@ class Container(Record):
         #]
 
         # parse objects
-        objects = [Object.create_object_from_name(name=name) for name in names]
+        objects = [Object.create_object_from_names(name=object_name, container=self.name) for object_name in object_names]
 
         # filter objects by exact time (precise until millisecond)
         objects_filter = [object.is_in_interval(start=start, end=end) for object in objects]

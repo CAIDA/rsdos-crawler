@@ -23,18 +23,20 @@ class Object(Record, coerce=True, serializer="json"):
     """
 
     name: str
+    container: str
     time: datetime
 
     @classmethod
-    def create_object_from_name(cls, name):
+    def create_object_from_names(cls, name, container):
         """
-        Create object instance from object name
+        Create object instance from object name and container name
 
         :param name: [str] name of object
-        :return: [doscrawler.objects.models.Object] valid object with name and time
+        :param container: [str] name of container where object is inside
+        :return: [doscrawler.objects.models.Object] valid object with name, container and time
         """
 
-        object = cls(name=name, time=cls._get_time_from_name(name=name))
+        object = cls(name=name, container=container, time=cls._get_time_from_name(name=name))
 
         return object
 
@@ -46,7 +48,7 @@ class Object(Record, coerce=True, serializer="json"):
         """
 
         # get lines from object
-        args = f"cors2ascii {self.name}"
+        args = f"cors2ascii swift://{self.container}/{self.name}"
         process = Popen(args=args, stdout=PIPE, shell=True)
         lines = [line.decode("utf-8").strip() for line in process.stdout]
 
@@ -99,10 +101,10 @@ class Object(Record, coerce=True, serializer="json"):
         :return: [datetime.datetime] corsaro start time of object in set up language
         """
 
-        corsaro_start_time_pattern = re.compile("^# CORSARO_INTERVAL_START.*?(\b\d{10}\b)$")
+        corsaro_start_time_pattern = re.compile(r"^# CORSARO_INTERVAL_START.*?(\b\d{10}\b)$")
 
         for line in lines:
-            line_match = re.match(corsaro_start_time_pattern, line)
+            line_match = corsaro_start_time_pattern.match(line)
             if line_match:
                 # parse time stamp
                 start_corsaro_interval = int(line_match.group(1))
@@ -124,12 +126,12 @@ class Object(Record, coerce=True, serializer="json"):
         """
 
         # beautiful regex
-        target_line_pattern = re.compile("^(\d+(?:\.\d+){3}),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),([\d\.]+),([\d\.]+)$")
+        target_line_pattern = re.compile(r"^(\d+(?:\.\d+){3}),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),(\d+),([\d\.]+),([\d\.]+)$")
 
         target_lines = []
 
         for line in lines:
-            line_match = re.match(target_line_pattern, line)
+            line_match = target_line_pattern.match(line)
             if line_match:
                 # parse target line
                 target_line = {}
@@ -143,8 +145,8 @@ class Object(Record, coerce=True, serializer="json"):
                 target_line["nr_bytes"] = int(line_match.group(8))
                 target_line["nr_bytes_in_interval"] = int(line_match.group(9))
                 target_line["max_ppm"] = int(line_match.group(10))
-                target_line["start_posix_time"] = datetime.utcfromtimestamp(float(line_match.group(11))).astimezone(settings.TIMEZONE).replace(tzinfo=None)
-                target_line["latest_posix_time"] = datetime.utcfromtimestamp(float(line_match.group(12))).astimezone(settings.TIMEZONE).replace(tzinfo=None)
+                target_line["start_time"] = datetime.utcfromtimestamp(float(line_match.group(11))).astimezone(settings.TIMEZONE).replace(tzinfo=None)
+                target_line["latest_time"] = datetime.utcfromtimestamp(float(line_match.group(12))).astimezone(settings.TIMEZONE).replace(tzinfo=None)
                 target_line["start_corsaro_interval"] = start_corsaro_interval
                 # append target line
                 target_lines.append(target_line)

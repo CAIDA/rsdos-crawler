@@ -73,7 +73,7 @@ git clone https://github.com/facebook/rocksdb.git
 
 # make rocks db
 cd rocksdb/
-make static_lib
+make install-shared INSTALL_PATH=/usr
 ```
 
 
