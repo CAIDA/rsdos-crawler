@@ -23,7 +23,7 @@ CACHE = "memory://"
 PROCESSING_GUARANTEE = "at_least_once"
 ORIGIN = "doscrawler.app"
 AUTODISCOVER = ["doscrawler.containers", "doscrawler.objects"] #True
-TIMEZONE = timezone("US/Pacific")
+TIMEZONE = timezone("Etc/UTC")
 DATADIR = "data/app"
 
 LOGGING = dictConfig(
@@ -76,3 +76,16 @@ CONTAINER_GET_OBJECTS_INTERVAL = 7200 # 2 hours
 
 OBJECT_RETENTION_INTERVAL = 604800 # 7 days
 RETENTION_INTERVAL = 604800 # 7 days
+
+CRAWL_RETRIES = 3
+CRAWL_RETRIES_INTERVAL = 120
+CRAWL_REPEAT_INTERVAL = 3600 # 1 hour
+CRAWL_EXPIRE_INTERVAL = 3600 # 1 hour
+CRAWL_REQUEST_HEADER = {"User-Agent": "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.10; rv:75.0) Gecko/20100101 Firefox/75.0"}
+CRAWL_REQUEST_TIMEOUT = 10
+
+TARGET_TTL = 10800 # 3 hours # how long to follow target from latest time of latest target line (including delay of reporting, also determines number of retr
+
+
+RECORD_TIME_AWAIT = 0
+

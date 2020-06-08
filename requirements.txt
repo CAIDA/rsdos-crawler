@@ -4,3 +4,4 @@ warcio==1.7.3
 requests==2.23.0
 simple-settings==0.19.1
 pytz==2020.1
+warcio==1.7.3

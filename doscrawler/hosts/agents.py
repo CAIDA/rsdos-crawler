@@ -14,7 +14,7 @@ import logging
 from doscrawler.app import app
 from doscrawler.hosts.tables import host_table
 from doscrawler.targets.topics import target_topic
-from doscrawler.crawls.topics import find_crawl_topic
+from doscrawler.crawls.topics import get_crawl_topic
 from doscrawler.hosts.topics import find_host_topic, update_host_topic
 from doscrawler.hosts.models import HostGroup
 
@@ -24,7 +24,7 @@ async def find_hosts_from_targets(targets):
     """
     Process targets in order to get their host names
 
-    :param objects:
+    :param targets:
     :return:
     """
 
@@ -37,8 +37,6 @@ async def find_hosts_from_targets(targets):
             # hosts of target have already been resolved
             # add hosts to target with empty crawls
             target.hosts = {host: [] for host in target_host_group.names}
-            # send to target topic to change target
-            await target_topic.send(value=target)
         else:
             # hosts of target have not yet been resolved
             # create and resolve host group
@@ -47,11 +45,11 @@ async def find_hosts_from_targets(targets):
             await update_host_topic.send(value=target_host_group)
             # add hosts to target with empty crawls
             target.hosts = {host: [] for host in target_host_group.names}
-            # send to target topic to change target
-            await target_topic.send(value=target)
 
+        # send to target topic to change target
+        await target_topic.send(value=target)
         # send to crawl topic to crawl hosts
-        await find_crawl_topic.send(value=target)
+        await get_crawl_topic.send(value=target)
 
 
 @app.agent(update_host_topic)
