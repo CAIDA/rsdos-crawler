@@ -18,5 +18,5 @@ host_table = app.Table(
     name="doscrawler-hosts",
     key_type=str,
     value_type=HostGroup,
-    default=bool
+    default=bool,
 )

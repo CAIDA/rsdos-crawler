@@ -15,6 +15,7 @@ from faust import Record
 from subprocess import Popen, PIPE
 from datetime import datetime, timedelta
 from simple_settings import settings
+from doscrawler.targets.models import TargetLine
 
 
 class Object(Record, coerce=True, serializer="json"):

@@ -43,7 +43,7 @@ class StreamContainer(Service):
         logging.info("Service to stream container is stopping.")
 
     @Service.timer(settings.CONTAINER_GET_OBJECTS_TIMER)
-    async def _get_latest_objects(self, interval=settings.CONTAINER_GET_OBJECTS_INTERVAL) -> None:
+    async def _get_latest_objects(self, interval=settings.CONTAINER_GET_OBJECTS_INTERVAL):
         """
         Get latest objects periodically from container
 

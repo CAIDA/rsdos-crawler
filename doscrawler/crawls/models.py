@@ -11,6 +11,7 @@ This module defines the models of the crawls for the DoS crawler.
 """
 
 import json
+import base64
 import requests
 import logging
 from io import BytesIO
@@ -23,13 +24,13 @@ from warcio.statusandheaders import StatusAndHeaders
 from warcio.timeutils import iso_date_to_datetime
 
 
-class Crawl(Record, coerce=True, serializer="raw"):
+class Crawl(Record, coerce=True, serializer="json"): # coerce=True, serializer="json"
     """
     Crawl model class
     """
 
     host: str
-    record: bytes
+    record: str
     time: datetime
     status: str
 
@@ -49,17 +50,8 @@ class Crawl(Record, coerce=True, serializer="raw"):
 
         return crawl
 
-    def is_success(self):
-        """
-        Checks if crawl has been successful
-
-        :return: [bool]
-        """
-
-        return True
-
     @staticmethod
-    def crawl_host(host, ip):
+    def _crawl_host(host, ip):
         """
         Crawl host
 
@@ -96,6 +88,9 @@ class Crawl(Record, coerce=True, serializer="raw"):
             session = requests.Session()
             response = session.send(request, stream=True, timeout=settings.CRAWL_REQUEST_TIMEOUT)
 
+            # raise on bad request (4XX client error or 5XX server error response)
+            response.raise_for_status()
+
             # prepare write response
             warc_response_payload = response.text.encode("utf-8")
             warc_response_headers = StatusAndHeaders("200 OK", response.headers, protocol="HTTP/1.0")
@@ -116,7 +111,7 @@ class Crawl(Record, coerce=True, serializer="raw"):
                                                            payload=BytesIO(warc_response_payload),
                                                            length=len(warc_response_payload),
                                                            warc_content_type="application/json; msgtype=metadata")
-            logging.warning(f"Request failed with {warc_response_payload}")
+            logging.warning(f"Request failed {warc_response_payload}")
 
         # get request time
         warc_request_date = warc_request.rec_headers.get_header("WARC-Date")
@@ -137,5 +132,6 @@ class Crawl(Record, coerce=True, serializer="raw"):
         warc_writer.write_record(warc_response)
 
         record = warc_writer.get_contents()
+        record = base64.encodebytes(record).decode("ascii")
 
         return record, time, status

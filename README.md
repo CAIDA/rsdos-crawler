@@ -3,8 +3,9 @@
 > Crawler for Targets of RSDoS Attacks
 
 Its purpose is to crawl targets of Randomly and Uniformly Spoofed Denial-of-Service attacks (RSDoS attacks) observed at
-the UCSD Network Telescope. The crawler is given the IP addresses of targets. From this the crawler returns the 
-responses of all succeeded requests. 
+the UCSD Network Telescope. The crawler streams the observed attacks there, organizes them into distinct targets by 
+the IP addresses and start times. Then it tries to crawl these targets, or rather their hosts, and records the responses
+send by them.
 
 
 ## Table of Contents
@@ -20,22 +21,26 @@ responses of all succeeded requests.
 
 ## Features
 
-- **Stream attacks**: The attacks are streamed as attack vectors from the UCSD Telescope DDoS Metadata. 
+- **Stream attacks**: The RSDoS attacks are streamed from the UCSD Telescope DDoS Metadata. This data is periodically 
+written in objects in a Swift container. In these objects are recorded the observed attack vectors in the respective 
+time period. The RSDoS Crawler relies on these vectors to identify targets of attacks. 
 :warning: **In development!**
-- **Track attacks**: The streamed attack vectors are tracked with reference to unique attacks, on a particular target
-and at a particular starting time. 
+- **Track targets**: For one and the same attack, on a specific IP address at a specific start time, usually there are 
+recorded many attack vectors over time. To track an attack over its entire duration, these vectors are considered 
+dependently. In this way, the target of an attack may be crawled over an extended period of time. And the results of the 
+RSDoS Crawler are neatly collected for each distinct target. 
 :warning: **In development!**
 - **Resolve hosts**: The IP addresses of the attacked targets are resolved to their host names with a naive reverse DNS
 resolution. The already resolved host names are cached. 
 :warning: **In development!**
-- **Crawl hosts**: The resolved host names are crawled in various ways. First, they are crawled as soon as the attack is
-reported. If hosts do not respond, the crawl is retried multiple times. Then, the hosts are periodically recrawled for a 
-certain period of time. This process is done cautiously so that hosts are not crawled multiple times in a certain period 
-of time. 
+- **Crawl hosts**: The host names resolved from the targets are crawled in various ways. First, they are crawled as soon 
+as the attack is reported. Second, if hosts do not respond, then the crawl is tried again and again with a certain delay 
+until a maximum number of retries is exceeded. Third, all host names from the target are periodically recrawled with a 
+longer delay possibly beyond the duration of the attack. This process is done cautiously so that hosts are not crawled 
+multiple times in a certain period of time. 
 :warning: **In development!** 
-- **Write records**: The records of all completed attacks are written in WARC files. When an attack is not ongoing 
-anymore, and its crawls are completed, all its records including the attack vectors, resolved host names and crawls are 
-written. 
+- **Write records**: After each crawl, the request to and the response from the host of the target are recorded in a 
+WARC record together with the target. These records are written periodically. 
 :warning: **In development!**
 
 
@@ -89,6 +94,14 @@ env/bin/pip install -r requirements.txt
 
 
 ## Quick Start
+
+```bash
+# use development settings
+export SIMPLE_SETTINGS=doscrawler.settings.development
+
+# start worker
+faust -A doscrawler.app worker -l info
+```
 
 
 ## Deployment

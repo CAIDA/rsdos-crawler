@@ -29,7 +29,7 @@ class HostGroup(Record):
         Create host group from ip
 
         :param ip: [str] IP address used by host group
-        :return: [doscrawler.hosts.models.HostGroup]
+        :return: [doscrawler.hosts.models.HostGroup] created host group from IP address
         """
 
         host_group = cls(ip=ip, names=cls._resolve_names(ip=ip))

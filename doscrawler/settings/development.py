@@ -20,9 +20,9 @@ BROKER = "kafka://localhost:9092"
 STORE = "memory://"
 CACHE = "memory://"
 
-PROCESSING_GUARANTEE = "at_least_once"
+PROCESSING_GUARANTEE = "exactly_once"
 ORIGIN = "doscrawler.app"
-AUTODISCOVER = ["doscrawler.containers", "doscrawler.objects"] #True
+AUTODISCOVER = ["doscrawler.containers", "doscrawler.objects", "doscrawler.targets", "doscrawler.hosts", "doscrawler.crawls"] #True "doscrawler.targets"
 TIMEZONE = timezone("Etc/UTC")
 DATADIR = "data/app"
 
@@ -64,7 +64,6 @@ TABLE_KEY_INDEX_SIZE = 1000
 
 STREAM_BUFFER_MAXSIZE = 100000
 
-
 WORKER_REDIRECT_STDOUTS = True
 WORKER_REDIRECT_STDOUTS_LEVEL = "INFO"
 
@@ -72,11 +71,11 @@ WEB_PORT = 6066
 WEB_IN_THREAD = True
 
 CONTAINER_GET_OBJECTS_TIMER = 60
-CONTAINER_GET_OBJECTS_INTERVAL = 7200 # 2 hours
+CONTAINER_GET_OBJECTS_INTERVAL = 100000000 # 7200 # 2 hours
 
-OBJECT_RETENTION_INTERVAL = 604800 # 7 days
 RETENTION_INTERVAL = 604800 # 7 days
 
+CRAWL_CONCURRENCY = 10
 CRAWL_RETRIES = 3
 CRAWL_RETRIES_INTERVAL = 120
 CRAWL_REPEAT_INTERVAL = 3600 # 1 hour
@@ -85,7 +84,3 @@ CRAWL_REQUEST_HEADER = {"User-Agent": "Mozilla/5.0 (Macintosh; U; Intel Mac OS X
 CRAWL_REQUEST_TIMEOUT = 10
 
 TARGET_TTL = 10800 # 3 hours # how long to follow target from latest time of latest target line (including delay of reporting, also determines number of retr
-
-
-RECORD_TIME_AWAIT = 0
-

@@ -24,13 +24,14 @@ async def find_hosts_from_targets(targets):
     """
     Process targets in order to get their host names
 
-    :param targets:
+    :param targets: [faust.types.streams.StreamT] stream of targets from find host topic
     :return:
     """
 
     logging.info("Agent to get hosts from targets is ready to receive targets.")
 
     async for target in targets:
+        logging.info(f"Want to find host for target {target}")
         # look up target in host table
         target_host_group = host_table[target.ip]
         if target_host_group:
@@ -57,7 +58,7 @@ async def update_hosts(host_groups):
     """
     Update host table by resolved and changed host groups
 
-    :param host_groups:
+    :param host_groups: [faust.types.streams.StreamT] stream of host groups from update host group topic
     :return:
     """
 

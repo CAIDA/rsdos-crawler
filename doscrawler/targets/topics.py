@@ -18,7 +18,7 @@ from doscrawler.targets.models import TargetLine, Target
 targetline_topic = app.topic(
     "doscrawler-targetlines",
     partitions=settings.TOPIC_PARTITIONS,
-    retention=settings.TARGETLINE_RETENTION_INTERVAL,
+    retention=settings.RETENTION_INTERVAL,
     value_type=TargetLine
 )
 

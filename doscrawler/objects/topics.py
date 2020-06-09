@@ -18,7 +18,7 @@ from doscrawler.objects.models import Object
 object_topic = app.topic(
     "doscrawler-objects",
     partitions=settings.TOPIC_PARTITIONS,
-    retention=settings.OBJECT_RETENTION_INTERVAL,
+    retention=settings.RETENTION_INTERVAL,
     key_type=str,
     value_type=Object
 )

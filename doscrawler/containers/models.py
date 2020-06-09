@@ -51,16 +51,24 @@ class Container(Record):
                 if start.day == end.day:
                     list_filter = f"-p datasource=ucsd-nt/year={start.year}/month={start.month}/day={start.day}/"
 
-        # get objects with list filter
-        args = f"swift list {self.name} {list_filter}"
-        process = Popen(args=args, stdout=PIPE, shell=True)
-        object_names = [line.decode("utf-8").strip() for line in process.stdout]
+        ################################################################################################################
+        # TODO: use dynamic objects                                                                                    #
+        ################################################################################################################
+
+        ## get objects with list filter
+        #args = f"swift list {self.name} {list_filter}"
+        #process = Popen(args=args, stdout=PIPE, shell=True)
+        #object_names = [line.decode("utf-8").strip() for line in process.stdout]
+
+        ################################################################################################################
 
         # get static objects for testing
-        #names = [
-        #    "swift://data-telescope-meta-dos/datasource=ucsd-nt/year=2020/month=5/day=8/ucsd-nt.1588953600.dos.cors.gz",
-        #    "swift://data-telescope-meta-dos/datasource=ucsd-nt/year=2020/month=5/day=9/ucsd-nt.1588959000.dos.cors.gz"
-        #]
+        object_names = [
+            "swift://data-telescope-meta-dos/datasource=ucsd-nt/year=2020/month=5/day=8/ucsd-nt.1588953600.dos.cors.gz",
+            "swift://data-telescope-meta-dos/datasource=ucsd-nt/year=2020/month=5/day=9/ucsd-nt.1588959000.dos.cors.gz"
+        ]
+
+        ################################################################################################################
 
         # parse objects
         objects = [Object.create_object_from_names(name=object_name, container=self.name) for object_name in object_names]
@@ -70,8 +78,3 @@ class Container(Record):
         objects = list(compress(objects, objects_filter))
 
         return objects
-
-######################################
-# TODO:                              #
-#   - remove code for static objects #
-######################################

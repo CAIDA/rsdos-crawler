@@ -12,10 +12,10 @@ This module defines the agents working on the targets for the DoS crawler.
 
 import logging
 from doscrawler.app import app
+from doscrawler.hosts.topics import find_host_topic
 from doscrawler.targets.models import Target
 from doscrawler.targets.topics import targetline_topic, target_topic
 from doscrawler.targets.tables import target_table
-from doscrawler.hosts.topics import find_host_topic
 
 
 @app.agent(targetline_topic)
@@ -23,7 +23,7 @@ async def get_targets_from_targetlines(target_lines):
     """
     Get targets from target lines
 
-    :param objects:
+    :param target_lines: [faust.types.streams.StreamT] stream of target lines from target line topic
     :return:
     """
 
@@ -43,7 +43,7 @@ async def update_targets(targets):
     """
     Update target table by resolved, crawled, retried and recrawled targets
 
-    :param targets:
+    :param targets: [faust.types.streams.StreamT] stream of targets from target topic
     :return:
     """
 
@@ -67,7 +67,7 @@ async def update_targets(targets):
             hosts_current = target_current.hosts.keys()
             hosts_new = [host for host in target.hosts.keys() if host not in hosts_current]
             hosts_update = [host for host in target.hosts.keys() if host in hosts_current]
-            hosts_all = {host: target_current.hosts[host] for host in hosts_new}
+            hosts_all = {host: target.hosts[host] for host in hosts_new}
             for host in hosts_update:
                 crawls_current_time = [crawl.time for crawl in target_current.hosts[host]]
                 crawls_new = [crawl for crawl in target.hosts[host] if crawl.time not in crawls_current_time]

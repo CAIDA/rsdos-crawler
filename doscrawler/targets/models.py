@@ -37,7 +37,7 @@ class TargetLine(Record, coerce=True, serializer="json"):
     start_corsaro_interval: datetime
 
 
-class Target(Record):
+class Target(Record, coerce=True, serializer="json"):
     """
     Target model class
     """
@@ -71,19 +71,14 @@ class Target(Record):
         :return: [int] number of maximum retries on one of the hosts of the targets
         """
 
-        interval_time = max(settings.CRAWL_REPEAT_INTERVAL, settings.CRAWL_RETRIES * settings.CRAWL_RETRIES_INTERVAL)
+        interval_time = settings.CRAWL_RETRIES_INTERVAL * (settings.CRAWL_RETRIES + 1)
         interval_time_start = datetime.now(settings.TIMEZONE).replace(tzinfo=None) - timedelta(seconds=interval_time)
 
-        retries = max([sum([crawl.time > interval_time_start for crawl in crawls_host]) for crawls_host in self.hosts.values()])
+        crawls = max([sum([crawl.time > interval_time_start and crawl.status == "failed" for crawl in crawls_host]) for crawls_host in self.hosts.values()])
+        retries = max(0, crawls - 1)
+
+        ################################################################################################################
+        # TODO: change strategy to identify retries                                                                    #
+        ################################################################################################################
 
         return retries
-
-########################################################################
-# TODO:                                                                #
-#   - create agent to resolve host names                               #
-#   - create agent to crawl host names                                 #
-#   - create agent to recrawl host names                               #
-#   - create agent to retry crawl host names                           #
-#   - create table for host name resolution                            #
-#   - create table for crawl host names, look up if in last hour crawl #
-########################################################################

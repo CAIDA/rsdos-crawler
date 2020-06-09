@@ -23,7 +23,7 @@ from doscrawler.crawls.models import Crawl
 from doscrawler.targets.models import Target
 
 
-@app.agent(get_crawl_topic)
+@app.agent(get_crawl_topic, concurrency=settings.CRAWL_CONCURRENCY)
 async def get_crawls(targets):
     """
     Process targets in order to crawl them
@@ -35,6 +35,7 @@ async def get_crawls(targets):
     logging.info("Agent to get crawls from targets is ready to receive targets.")
 
     async for target in targets:
+        logging.info(f"Want to crawl target {target}")
         # prepare target with failed hosts only
         hosts_failed = {}
         for host in target.hosts.keys():
@@ -45,7 +46,7 @@ async def get_crawls(targets):
                 # host of target has already been crawled
                 # check timestamp
                 expire_time = datetime.now(settings.TIMEZONE).replace(tzinfo=None) - timedelta(seconds=settings.CRAWL_EXPIRE_INTERVAL - 1)
-                if target_host_crawl.request_time < expire_time:
+                if target_host_crawl.time < expire_time:
                     # renew expired crawl
                     target_host_crawl = Crawl.get_crawl(host=host, ip=target.ip)
                     # append crawl to host of target
@@ -79,12 +80,16 @@ async def get_crawls(targets):
         # send to target topic to change target by crawls
         await target_topic.send(value=target)
 
-        if target.get_no_retry_crawl() < settings.CRAWL_RETRIES:
-            # all hosts of target have been crawled less than maximum retries
-            # prepare target with failed host only
-            target_failed = Target(ip=target.ip, start=target.start, target_lines=target.target_lines, hosts=hosts_failed)
-            # send to wait retry crawl topic to retry crawl hosts later
-            await wait_retry_crawl_topic.send(value=target_failed)
+        # get number of retries
+        target_retries = target.get_no_retry_crawl()
+
+        if hosts_failed:
+            if target_retries < settings.CRAWL_RETRIES:
+                # all hosts of target have been crawled less than maximum retries
+                # prepare target with failed host only
+                target_failed = Target(ip=target.ip, start=target.start, target_lines=target.target_lines, hosts=hosts_failed)
+                # send to wait retry crawl topic to retry crawl hosts later
+                await wait_retry_crawl_topic.send(value=target_failed)
 
         # check if repeats needed for target
         if target.get_ttl() > settings.CRAWL_REPEAT_INTERVAL:
@@ -130,7 +135,7 @@ async def wait_repeat_crawls(targets):
 
     async for target in targets:
         # get delay from latest request time and desired delay in settings
-        latest_time = max([crawl.request_time for crawl in itertools.chain.from_iterable(target.hosts.values())])
+        latest_time = max([crawl.time for crawl in itertools.chain.from_iterable(target.hosts.values())])
         retry_time = latest_time + timedelta(seconds=settings.CRAWL_REPEAT_INTERVAL)
         delay = (retry_time - datetime.now(settings.TIMEZONE).replace(tzinfo=None)).total_seconds()
 

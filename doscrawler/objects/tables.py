@@ -20,13 +20,8 @@ object_table = app.Table(
     name="doscrawler-objects",
     key_type=str,
     value_type=Object,
-    default=bool #changelog_topic=object_topic
+    default=bool
 ).tumbling(
     size=timedelta(seconds=settings.CONTAINER_GET_OBJECTS_TIMER),
     expires=timedelta(seconds=5*settings.CONTAINER_GET_OBJECTS_TIMER)
 ).relative_to_now()
-
-#####################################
-# TODO:                             #
-#   - make table changelog of topic #
-#####################################

@@ -18,5 +18,5 @@ target_table = app.Table(
     name="doscrawler-targets",
     key_type=str,
     value_type=Target,
-    default=bool
+    default=bool,
 )

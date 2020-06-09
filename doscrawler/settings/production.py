@@ -6,6 +6,6 @@
 Production
 ----------
 
-This module defines the production configuration of the DoS crawler.
+This module defines the production settings of the DoS crawler.
 
 """
