@@ -3,9 +3,9 @@
 
 """
 
-WARCs
+Dumps
 -----
 
-This module defines the WARCs of the DoS crawler.
+This module defines the dumps of the DoS crawler.
 
 """
