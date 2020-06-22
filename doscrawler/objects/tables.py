@@ -10,18 +10,15 @@ This module defines the tables of the objects in the Swift containers for the Do
 
 """
 
-from datetime import timedelta
-from simple_settings import settings
 from doscrawler.app import app
 from doscrawler.objects.models import Object
+from doscrawler.objects.topics import log_object_topic
 
 
 object_table = app.Table(
-    name="doscrawler-objects",
+    name="doscrawler-object",
     key_type=str,
     value_type=Object,
-    default=bool
-).tumbling(
-    size=timedelta(seconds=settings.CONTAINER_GET_OBJECTS_TIMER),
-    expires=timedelta(seconds=5*settings.CONTAINER_GET_OBJECTS_TIMER)
-).relative_to_now()
+    default=bool,
+    changelog_topic=log_object_topic
+)

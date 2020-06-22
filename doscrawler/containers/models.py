@@ -10,22 +10,21 @@ This module defines the models of the SWIFT containers for the DoS crawler.
 
 """
 
-import datetime
 from faust import Record
 from itertools import compress
 from subprocess import Popen, PIPE
-from simple_settings import settings
+from datetime import datetime, timedelta, timezone
 from doscrawler.objects.models import Object
 
 
-class Container(Record):
+class Container(Record, serializer="json"):
     """
     Container model class
     """
 
     name: str = "data-telescope-meta-dos"
 
-    def get_latest_objects(self, interval):
+    def get_objects(self, interval):
         """
         Get latest objects from container
 
@@ -35,11 +34,11 @@ class Container(Record):
         """
 
         # prepare interval
-        if not isinstance(interval, datetime.timedelta):
-            interval = datetime.timedelta(seconds=interval)
+        if not isinstance(interval, timedelta):
+            interval = timedelta(seconds=interval)
 
         # prepare start and end time of interval
-        start = datetime.datetime.now(settings.TIMEZONE).replace(tzinfo=None)
+        start = datetime.now(timezone.utc)
         end = start - interval
 
         # prepare filter by start and end time (precise up until day)

@@ -13,9 +13,7 @@ This module defines the models of the objects in the Swift containers for the Do
 import re
 from faust import Record
 from subprocess import Popen, PIPE
-from datetime import datetime, timedelta
-from simple_settings import settings
-from doscrawler.targets.models import TargetLine
+from datetime import datetime, timedelta, timezone
 
 
 class Object(Record, coerce=True, serializer="json"):
@@ -37,7 +35,7 @@ class Object(Record, coerce=True, serializer="json"):
         :return: [doscrawler.objects.models.Object] valid object with name, container and time
         """
 
-        object = cls(name=name, container=container, time=cls._get_time_from_name(name=name))
+        object = cls(name=name, container=container, time=cls._get_time(name=name))
 
         return object
 
@@ -53,15 +51,17 @@ class Object(Record, coerce=True, serializer="json"):
         process = Popen(args=args, stdout=PIPE, shell=True)
         lines = [line.decode("utf-8").strip() for line in process.stdout]
 
-        start_corsaro_interval = self._get_corsaro_start_time_from_lines(lines=lines)
+        # get corsaro start time
+        start_corsaro_interval = self._get_corsaro_start_time(lines=lines)
 
         if not start_corsaro_interval:
             raise Exception(
-                f"Object {self.name} has a problem because the start corsaro interval could not be found. The target " \
-                f"lines from the object could not be processed."
+                f"Object {self.container}/{self.name} has a problem because the start corsaro interval could not be " \
+                f"found. The target lines from the object could not be processed."
             )
 
-        target_lines = self._get_target_lines_from_lines(lines=lines, start_corsaro_interval=start_corsaro_interval)
+        # get target lines
+        target_lines = self._get_target_lines(lines=lines, start_corsaro_interval=start_corsaro_interval)
 
         return target_lines
 
@@ -79,27 +79,27 @@ class Object(Record, coerce=True, serializer="json"):
         return in_interval
 
     @staticmethod
-    def _get_time_from_name(name):
+    def _get_time(name):
         """
         Get time of object from its name
 
         :param name: [str] name of object
-        :return: [datetime.datetime] time of object in set up language
+        :return: [datetime.datetime] time of object in utc
         """
 
         time = re.search(r"\b\d{10}\b", name)
         time = int(time.group(0))
-        time = datetime.utcfromtimestamp(time).astimezone(settings.TIMEZONE).replace(tzinfo=None)
+        time = datetime.fromtimestamp(time, timezone.utc)
 
         return time
 
     @staticmethod
-    def _get_corsaro_start_time_from_lines(lines):
+    def _get_corsaro_start_time(lines):
         """
         Get corsaro start time from lines in object
 
         :param lines: [list] list of lines in object, each line is one element in the list
-        :return: [datetime.datetime] corsaro start time of object in set up language
+        :return: [datetime.datetime] corsaro start time of object in utc
         """
 
         corsaro_start_time_pattern = re.compile(r"^# CORSARO_INTERVAL_START.*?(\b\d{10}\b)$")
@@ -109,7 +109,7 @@ class Object(Record, coerce=True, serializer="json"):
             if line_match:
                 # parse time stamp
                 start_corsaro_interval = int(line_match.group(1))
-                start_corsaro_interval = datetime.utcfromtimestamp(start_corsaro_interval).astimezone(settings.TIMEZONE).replace(tzinfo=None)
+                start_corsaro_interval = datetime.fromtimestamp(start_corsaro_interval, timezone.utc)
                 # subtract time difference of 4 minutes
                 start_corsaro_interval -= timedelta(minutes=4)
 
@@ -118,11 +118,12 @@ class Object(Record, coerce=True, serializer="json"):
         return
 
     @staticmethod
-    def _get_target_lines_from_lines(lines, start_corsaro_interval):
+    def _get_target_lines(lines, start_corsaro_interval):
         """
         Get target lines from line sin object
 
         :param lines: [list] list of lines in object, each line is one element in the list
+        :param start_corsaro_interval: [datetime.datetime] corsaro start time of object in utc
         :return: [list] list of target lines as dictionaries
         """
 
@@ -146,8 +147,8 @@ class Object(Record, coerce=True, serializer="json"):
                 target_line["nr_bytes"] = int(line_match.group(8))
                 target_line["nr_bytes_in_interval"] = int(line_match.group(9))
                 target_line["max_ppm"] = int(line_match.group(10))
-                target_line["start_time"] = datetime.utcfromtimestamp(float(line_match.group(11))).astimezone(settings.TIMEZONE).replace(tzinfo=None)
-                target_line["latest_time"] = datetime.utcfromtimestamp(float(line_match.group(12))).astimezone(settings.TIMEZONE).replace(tzinfo=None)
+                target_line["start_time"] = datetime.fromtimestamp(float(line_match.group(11)), timezone.utc)
+                target_line["latest_time"] = datetime.fromtimestamp(float(line_match.group(12)), timezone.utc)
                 target_line["start_corsaro_interval"] = start_corsaro_interval
                 # append target line
                 target_lines.append(target_line)

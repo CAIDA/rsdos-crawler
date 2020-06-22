@@ -4,7 +4,7 @@
 """
 
 Services
-------
+--------
 
 This module defines the services on the Swift containers for the DoS crawler.
 
@@ -15,7 +15,7 @@ from mode import Service
 from simple_settings import settings
 from doscrawler.app import app
 from doscrawler.containers.models import Container
-from doscrawler.objects.topics import object_topic
+from doscrawler.objects.topics import change_object_topic
 
 
 @app.service
@@ -43,7 +43,7 @@ class StreamContainer(Service):
         logging.info("Service to stream container is stopping.")
 
     @Service.timer(settings.CONTAINER_GET_OBJECTS_TIMER)
-    async def _get_latest_objects(self, interval=settings.CONTAINER_GET_OBJECTS_INTERVAL):
+    async def _get_objects(self, interval=settings.CONTAINER_GET_OBJECTS_INTERVAL):
         """
         Get latest objects periodically from container
 
@@ -55,10 +55,11 @@ class StreamContainer(Service):
         logging.info("Service to stream container is starting to get latest objects.")
 
         # get latest objects from container
-        objects = Container().get_latest_objects(interval=interval)
+        objects = Container().get_objects(interval=interval)
 
-        # send objects to object topic
         for object in objects:
-            await object_topic.send(key=object.name, value=object)
+            # for each recent object in container
+            # send object to change object topic
+            await change_object_topic.send(key=f"add/{object.container}/{object.name}", value=object)
 
         logging.info(f"Service to stream container has sent {len(objects)} objects to the object topic.")

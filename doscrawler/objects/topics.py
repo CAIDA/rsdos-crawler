@@ -15,10 +15,17 @@ from doscrawler.app import app
 from doscrawler.objects.models import Object
 
 
-object_topic = app.topic(
-    "doscrawler-objects",
+change_object_topic = app.topic(
+    "doscrawler-object-change",
     partitions=settings.TOPIC_PARTITIONS,
-    retention=settings.RETENTION_INTERVAL,
+    retention=settings.CONTAINER_GET_OBJECTS_INTERVAL,
     key_type=str,
+    value_type=Object
+)
+
+log_object_topic = app.topic(
+    "doscrawler-object-log",
+    partitions=settings.TOPIC_PARTITIONS,
+    retention=settings.CONTAINER_GET_OBJECTS_INTERVAL,
     value_type=Object
 )
