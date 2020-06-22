@@ -11,17 +11,19 @@ This module defines the models of the hosts for the DoS crawler.
 """
 
 import socket
+from datetime import datetime, timezone
 from faust import Record
 from typing import List
 
 
-class HostGroup(Record):
+class HostGroup(Record, coerce=True, serializer="json"):
     """
     Host model class
     """
 
     ip: str
     names: List[str]
+    time: datetime
 
     @classmethod
     def create_hostgroup_from_ip(cls, ip):
@@ -32,14 +34,14 @@ class HostGroup(Record):
         :return: [doscrawler.hosts.models.HostGroup] created host group from IP address
         """
 
-        host_group = cls(ip=ip, names=cls._resolve_names(ip=ip))
+        host_group = cls(ip=ip, names=cls._get_names(ip=ip), time=datetime.now(timezone.utc))
 
         return host_group
 
     @staticmethod
-    def _resolve_names(ip):
+    def _get_names(ip):
         """
-        Resolve names of hosts in host group
+        Get names of hosts in host group
 
         :param ip: [str] IP address used by host group
         :return: [list] host group as list of host names including the IP address itself

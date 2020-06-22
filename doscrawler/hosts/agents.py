@@ -11,59 +11,91 @@ This module defines the agents working on the hosts for the DoS crawler.
 """
 
 import logging
+from datetime import datetime, timezone, timedelta
+from simple_settings import settings
 from doscrawler.app import app
 from doscrawler.hosts.tables import host_table
-from doscrawler.targets.topics import target_topic
+from doscrawler.targets.topics import change_target_topic
 from doscrawler.crawls.topics import get_crawl_topic
-from doscrawler.hosts.topics import find_host_topic, update_host_topic
+from doscrawler.hosts.topics import get_host_topic, change_host_topic
 from doscrawler.hosts.models import HostGroup
 
 
-@app.agent(find_host_topic)
-async def find_hosts_from_targets(targets):
+@app.agent(get_host_topic)
+async def get_hosts(targets):
     """
-    Process targets in order to get their host names
+    Get host names from targets
 
-    :param targets: [faust.types.streams.StreamT] stream of targets from find host topic
+    :param targets: [faust.types.streams.StreamT] stream of targets from get host topic
     :return:
     """
 
     logging.info("Agent to get hosts from targets is ready to receive targets.")
 
-    async for target in targets:
-        logging.info(f"Want to find host for target {target}")
-        # look up target in host table
-        target_host_group = host_table[target.ip]
-        if target_host_group:
+    async for target_key, target in targets.items():
+        # look up host group for target in host table
+        target_host_group_current = host_table[target.ip]
+        if target_host_group_current:
             # hosts of target have already been resolved
-            # add hosts to target with empty crawls
-            target.hosts = {host: [] for host in target_host_group.names}
+            # check timestamp
+            expire_time = datetime.now(timezone.utc) - timedelta(seconds=settings.HOST_CACHE_INTERVAL)
+
+            if target_host_group_current.time < expire_time:
+                # renew expired host group
+                # create and resolve host group
+                target_host_group = HostGroup.create_hostgroup_from_ip(ip=target.ip)
+                # send host group to host topic
+                await change_host_topic.send(key=f"add/{target.ip}", value=target_host_group)
+                # add hosts to target with empty crawls
+                target.hosts = {host: [] for host in target_host_group.names}
+
+            else:
+                # use cached host group in host table
+                # add hosts to target with empty crawls
+                target.hosts = {host: [] for host in target_host_group_current.names}
+
         else:
             # hosts of target have not yet been resolved
             # create and resolve host group
             target_host_group = HostGroup.create_hostgroup_from_ip(ip=target.ip)
             # send to host topic to update hosts
-            await update_host_topic.send(value=target_host_group)
+            await change_host_topic.send(key=f"add/{target.ip}", value=target_host_group)
             # add hosts to target with empty crawls
             target.hosts = {host: [] for host in target_host_group.names}
 
-        # send to target topic to change target
-        await target_topic.send(value=target)
-        # send to crawl topic to crawl hosts
-        await get_crawl_topic.send(value=target)
+        # send to change target topic to update target
+        await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
+
+        # send to get crawl topic to crawl hosts
+        await get_crawl_topic.send(key=f"{target.ip}/{target.start_time}", value=target)
 
 
-@app.agent(update_host_topic)
-async def update_hosts(host_groups):
+@app.agent(change_host_topic)
+async def change_hosts(host_groups):
     """
-    Update host table by resolved and changed host groups
+    Change host table by resolved and changed host groups
 
-    :param host_groups: [faust.types.streams.StreamT] stream of host groups from update host group topic
+    :param host_groups: [faust.types.streams.StreamT] stream of host groups from change host topic
     :return:
     """
 
     logging.info("Agent to update hosts is ready to receive host groups.")
 
-    async for host_group in host_groups:
-        # update host group in host table
-        host_table[host_group.ip] = host_group
+    async for host_group_key, host_group in host_groups.items():
+        if host_group_key.startswith("add"):
+            # host has to be added
+            # update host group in host table
+            host_table[host_group.ip] = host_group
+        elif host_group_key.startswith("delete"):
+            # host has to be deleted
+            # get current host group
+            host_group_current = host_table[host_group.ip]
+
+            if host_group_current and host_group_current.time == host_group.time:
+                # delete host from host table when has not changed
+                host_table.pop(host_group_current.ip)
+        else:
+            raise Exception(
+                f"Agent to update hosts raised an exception because a host group has an unknown action. The " \
+                f"key of the host group is {host_group_key}."
+            )

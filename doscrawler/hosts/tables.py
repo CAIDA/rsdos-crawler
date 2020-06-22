@@ -12,11 +12,13 @@ This module defines the tables of the hosts for the DoS crawler.
 
 from doscrawler.app import app
 from doscrawler.hosts.models import HostGroup
+from doscrawler.hosts.topics import log_host_topic
 
 
 host_table = app.Table(
-    name="doscrawler-hosts",
+    name="doscrawler-host",
     key_type=str,
     value_type=HostGroup,
     default=bool,
+    changelog_topic=log_host_topic
 )

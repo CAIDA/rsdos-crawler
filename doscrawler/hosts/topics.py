@@ -16,16 +16,25 @@ from doscrawler.targets.models import Target
 from doscrawler.hosts.models import HostGroup
 
 
-find_host_topic = app.topic(
-    "doscrawler-hosts-find",
+get_host_topic = app.topic(
+    "doscrawler-host-get",
     partitions=settings.TOPIC_PARTITIONS,
-    retention=settings.RETENTION_INTERVAL,
+    retention=settings.HOST_CACHE_INTERVAL,
+    key_type=str,
     value_type=Target
 )
 
-update_host_topic = app.topic(
-    "doscrawler-hosts-update",
+change_host_topic = app.topic(
+    "doscrawler-host-change",
     partitions=settings.TOPIC_PARTITIONS,
-    retention=settings.RETENTION_INTERVAL,
+    retention=settings.HOST_CACHE_INTERVAL,
+    key_type=str,
+    value_type=HostGroup
+)
+
+log_host_topic = app.topic(
+    "doscrawler-host-log",
+    partitions=settings.TOPIC_PARTITIONS,
+    retention=settings.HOST_CACHE_INTERVAL,
     value_type=HostGroup
 )
