@@ -15,16 +15,39 @@ from doscrawler.app import app
 from doscrawler.targets.models import TargetLine, Target
 
 
-targetline_topic = app.topic(
-    "doscrawler-targetlines",
+get_target_topic = app.topic(
+    "doscrawler-target-get",
     partitions=settings.TOPIC_PARTITIONS,
-    retention=settings.RETENTION_INTERVAL,
+    retention=settings.CONTAINER_GET_OBJECTS_INTERVAL,
     value_type=TargetLine
 )
 
-target_topic = app.topic(
-    "doscrawler-targets",
+change_target_topic = app.topic(
+    "doscrawler-target-change",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.RETENTION_INTERVAL,
+    key_type=str,
+    value_type=Target
+)
+
+log_target_topic = app.topic(
+    "doscrawler-target-log",
+    partitions=settings.TOPIC_PARTITIONS,
+    retention=settings.RETENTION_INTERVAL,
+    value_type=Target
+)
+
+change_target_candidate_topic = app.topic(
+    "doscrawler-target-candidate-change",
+    partitions=settings.TOPIC_PARTITIONS,
+    retention=settings.TARGET_MERGE_INTERVAL,
+    key_type=str,
+    value_type=Target
+)
+
+log_target_candidate_topic = app.topic(
+    "doscrawler-target-candidate-log",
+    partitions=settings.TOPIC_PARTITIONS,
+    retention=settings.TARGET_MERGE_INTERVAL,
     value_type=Target
 )
