@@ -22,13 +22,13 @@ class Container(Record, serializer="json"):
     Container model class
     """
 
-    name: str = "data-telescope-meta-dos"
+    name: str
 
     def get_objects(self, interval):
         """
         Get latest objects from container
 
-        :param interval: [int, datetime.timedelta] time to look back for objects from now, e.g. 3,600 for all objects in
+        :param interval: [int, datetime.timedelta] time to look back for objects from now, e.g. 3600 for all objects in
         last hour
         :return: [list] list of objects
         """
@@ -51,26 +51,22 @@ class Container(Record, serializer="json"):
                     list_filter = f"-p datasource=ucsd-nt/year={start.year}/month={start.month}/day={start.day}/"
 
         ################################################################################################################
-        # TODO: use dynamic objects                                                                                    #
+        # TODO: use non-random objects                                                                                 #
         ################################################################################################################
 
         ## get objects with list filter
         #args = f"swift list {self.name} {list_filter}"
         #process = Popen(args=args, stdout=PIPE, shell=True)
         #object_names = [line.decode("utf-8").strip() for line in process.stdout]
+        ## parse objects
+        #objects = [Object.create_object_from_names(name=object_name, container=self.name) for object_name in object_names]
 
         ################################################################################################################
 
-        # get static objects for testing
-        object_names = [
-            "swift://data-telescope-meta-dos/datasource=ucsd-nt/year=2020/month=5/day=8/ucsd-nt.1588953600.dos.cors.gz",
-            "swift://data-telescope-meta-dos/datasource=ucsd-nt/year=2020/month=5/day=9/ucsd-nt.1588959000.dos.cors.gz"
-        ]
+        # create random object
+        objects = [Object.create_random_object(container=self.name)]
 
         ################################################################################################################
-
-        # parse objects
-        objects = [Object.create_object_from_names(name=object_name, container=self.name) for object_name in object_names]
 
         # filter objects by exact time (precise until millisecond)
         objects_filter = [object.is_in_interval(start=start, end=end) for object in objects]

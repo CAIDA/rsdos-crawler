@@ -19,7 +19,7 @@ from doscrawler.targets.topics import get_target_topic, change_target_candidate_
 from doscrawler.targets.tables import target_table, target_candidate_table
 
 
-@app.agent(get_target_topic, concurrency=1)
+@app.agent(get_target_topic, concurrency=settings.TARGET_CONCURRENCY)
 async def get_targets(target_lines):
     """
     Get targets from target lines
@@ -32,23 +32,18 @@ async def get_targets(target_lines):
 
     async for target_line_key, target_line in target_lines.items():
         # look up target candidate for target line
-        target_line_target_candidate = target_candidate_table[target_line_key]
-        if target_line_target_candidate:
-            # exists target candidate with same ip address
-            if target_line_target_candidate.is_mergable_target_line(target_line=target_line):
-                # target candidate is within time window to merge with target candidate
-                # update target
-                target_target_lines = target_line_target_candidate.target.target_lines + [target_line]
-                target_latest_time = max([target_line.latest_time for target_line in target_target_lines])
-                target = Target(ip=target_line_target_candidate.target.ip, start_time=target_line_target_candidate.start_time,
-                                latest_time=target_latest_time, target_lines=target_target_lines)
-            else:
-                # target candidate is not within time window
-                # create target
-                target = Target(ip=target_line.target_ip, start_time=target_line.start_time, latest_time=target_line.latest_time,
-                                target_lines=[target_line])
+        target_line_target_candidate = target_candidate_table[target_line.target_ip]
+
+        if target_line_target_candidate and target_line_target_candidate.is_mergable_target_line(target_line=target_line):
+            # target candidate is within time window to merge with target candidate
+            # update target
+            target_target_lines = target_line_target_candidate.target_lines + [target_line]
+            target_latest_time = max([target_line.latest_time for target_line in target_target_lines])
+            target = Target(ip=target_line_target_candidate.ip, start_time=target_line_target_candidate.start_time,
+                            latest_time=target_latest_time, target_lines=target_target_lines)
+
         else:
-            # exists no mergable target candidate
+            # exists no mergable target candidate or target candidate is not within time window
             # create target
             target = Target(ip=target_line.target_ip, start_time=target_line.start_time, latest_time=target_line.latest_time,
                             target_lines=[target_line])
@@ -56,10 +51,10 @@ async def get_targets(target_lines):
         # send target candidate to change target candidate topic for update
         await change_target_candidate_topic.send(key=f"add/{target.ip}", value=target)
 
-        # send target to change target topic
-        await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
+        ## send to change target topic to update target with intermediate result of target lines
+        #await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
 
-        # send to get host topic to get host names
+        # send target to get host topic to get host names
         await get_host_topic.send(key=f"{target.ip}/{target.start_time}", value=target)
 
 
@@ -79,14 +74,17 @@ async def change_target_candidates(target_candidates):
             # target candidate has to be added
             # update target candidate in target candidate table
             target_candidate_table[f"{target_candidate.ip}"] = target_candidate
+
         elif target_candidate_key.startswith("delete"):
             # target candidate has to be deleted
             # look up target candidate in target candidate table
             target_candidate_current = target_candidate_table[f"{target_candidate.ip}"]
+
             if target_candidate_current and target_candidate_current.latest_time == target_candidate.latest_time:
                 # current target candidates has not changed in table
                 # delete target candidate from target candidate table
                 target_candidate_table.pop(f"{target_candidate_current.ip}")
+
         else:
             raise Exception(
                 f"Agent to change target candidates raised an exception because a target has an unknown action. The " \
@@ -107,10 +105,9 @@ async def change_targets(targets):
 
     async for target_key, target in targets.items():
         if target_key.startswith("add"):
-            # target has to arrive 5 seconds before end of life
-            ## ignore targets after ttl
-            ## last second changes are not written in separate dump
+            # target should be added
             if target.get_ttl() < 5:
+                # ignore targets after ttl and close to after ttl
                 continue
             # target has to be added
             # look up target in target table
@@ -123,7 +120,7 @@ async def change_targets(targets):
                 targetlines_new = [target_line for target_line in target.target_lines if f"{target_line.start_time}/{target_line.latest_time}" not in targetlines_current_keys]
                 targetlines_all = target_current.target_lines + targetlines_new
 
-                # get last updated
+                # get latest time
                 latest_time = max([target_line.latest_time for target_line in targetlines_all])
 
                 # get all hosts
@@ -131,6 +128,7 @@ async def change_targets(targets):
                 hosts_new = [host for host in target.hosts.keys() if host not in hosts_current]
                 hosts_update = [host for host in target.hosts.keys() if host in hosts_current]
                 hosts_all = {host: list(set(target.hosts[host])) for host in hosts_new}
+
                 for host in hosts_update:
                     crawls_current_time = [crawl.time for crawl in target_current.hosts[host]]
                     crawls_new = [crawl for crawl in target.hosts[host] if crawl.time not in crawls_current_time]
@@ -145,7 +143,7 @@ async def change_targets(targets):
                 # target has not yet been stored in target table
                 for host in target.hosts.keys():
                     # for each host
-                    # # deduplicate crawls
+                    # deduplicate crawls
                     target.hosts[host] = list(set(target.hosts[host]))
                 # add target to target table
                 target_table[f"{target.ip}/{target.start_time}"] = target

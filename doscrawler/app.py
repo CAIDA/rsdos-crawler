@@ -12,8 +12,6 @@ This module sets up the application of the DoS crawler.
 
 import faust
 import logging
-from typing import Set
-from faust.types import AppT, TP
 from simple_settings import settings
 
 
@@ -37,8 +35,6 @@ def configure(app, conf, **kwargs):
     conf.cache = settings.CACHE
     conf.processing_guarantee = settings.PROCESSING_GUARANTEE
     conf.autodiscover = settings.AUTODISCOVER
-    conf.timezone = settings.TIMEZONE
-    conf.datadir = settings.DATADIR
     conf.logging = settings.LOGGING
     conf.key_serializer = settings.KEY_SERIALIZER
     conf.value_serializer = settings.VALUE_SERIALIZER
@@ -92,7 +88,7 @@ def after_configuration(app, **kwargs):
 
 
 @app.on_partitions_revoked.connect
-async def on_partitions_revoked(app: AppT, revoked: Set[TP], **kwargs) -> None:
+async def on_partitions_revoked(app, revoked, **kwargs):
     """
     Process when application revokes partitions
 
@@ -106,7 +102,7 @@ async def on_partitions_revoked(app: AppT, revoked: Set[TP], **kwargs) -> None:
 
 
 @app.on_partitions_assigned.connect
-async def on_partitions_assigned(app: AppT, assigned: Set[TP], **kwargs) -> None:
+async def on_partitions_assigned(app, assigned, **kwargs):
     """
     Process when application assigns partitions
 

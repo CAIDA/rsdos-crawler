@@ -11,7 +11,6 @@ This module defines the agents working on the hosts for the DoS crawler.
 """
 
 import logging
-from datetime import datetime, timezone, timedelta
 from simple_settings import settings
 from doscrawler.app import app
 from doscrawler.hosts.tables import host_table
@@ -21,7 +20,7 @@ from doscrawler.hosts.topics import get_host_topic, change_host_topic
 from doscrawler.hosts.models import HostGroup
 
 
-@app.agent(get_host_topic)
+@app.agent(get_host_topic, concurrency=settings.HOST_CONCURRENCY)
 async def get_hosts(targets):
     """
     Get host names from targets
@@ -35,13 +34,11 @@ async def get_hosts(targets):
     async for target_key, target in targets.items():
         # look up host group for target in host table
         target_host_group_current = host_table[target.ip]
+
         if target_host_group_current:
             # hosts of target have already been resolved
-            # check timestamp
-            expire_time = datetime.now(timezone.utc) - timedelta(seconds=settings.HOST_CACHE_INTERVAL)
-
-            if target_host_group_current.time < expire_time:
-                # renew expired host group
+            if not target_host_group_current.is_valid:
+                # host group is not valid anymore
                 # create and resolve host group
                 target_host_group = HostGroup.create_hostgroup_from_ip(ip=target.ip)
                 # send host group to host topic
@@ -50,7 +47,7 @@ async def get_hosts(targets):
                 target.hosts = {host: [] for host in target_host_group.names}
 
             else:
-                # use cached host group in host table
+                # host group is still valid
                 # add hosts to target with empty crawls
                 target.hosts = {host: [] for host in target_host_group_current.names}
 
@@ -63,8 +60,8 @@ async def get_hosts(targets):
             # add hosts to target with empty crawls
             target.hosts = {host: [] for host in target_host_group.names}
 
-        # send to change target topic to update target
-        await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
+        ## send to change target topic to update target with intermediate result of host names
+        #await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
 
         # send to get crawl topic to crawl hosts
         await get_crawl_topic.send(key=f"{target.ip}/{target.start_time}", value=target)
@@ -86,6 +83,7 @@ async def change_hosts(host_groups):
             # host has to be added
             # update host group in host table
             host_table[host_group.ip] = host_group
+
         elif host_group_key.startswith("delete"):
             # host has to be deleted
             # get current host group
@@ -94,6 +92,7 @@ async def change_hosts(host_groups):
             if host_group_current and host_group_current.time == host_group.time:
                 # delete host from host table when has not changed
                 host_table.pop(host_group_current.ip)
+
         else:
             raise Exception(
                 f"Agent to update hosts raised an exception because a host group has an unknown action. The " \

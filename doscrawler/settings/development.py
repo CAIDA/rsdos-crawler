@@ -19,7 +19,7 @@ STORE = "memory://"
 CACHE = "memory://"
 PROCESSING_GUARANTEE = "exactly_once"
 ORIGIN = "doscrawler.app"
-AUTODISCOVER = ["doscrawler.containers", "doscrawler.objects", "doscrawler.targets", "doscrawler.hosts", "doscrawler.crawls", "doscrawler.dumps"]
+AUTODISCOVER = ["doscrawler.containers", "doscrawler.objects", "doscrawler.targets", "doscrawler.hosts", "doscrawler.crawls", "doscrawler.dumps", "doscrawler.slacks"]
 LOGGING = dictConfig(
     {
         "version": 1,
@@ -52,34 +52,42 @@ WORKER_REDIRECT_STDOUTS = True
 WORKER_REDIRECT_STDOUTS_LEVEL = "INFO"
 WEB_PORT = 6066
 WEB_IN_THREAD = True
-RETENTION_INTERVAL = 604800 # 7 days
+RETENTION_INTERVAL = 86400 # 1 day
 
 # containers
+CONTAINER_NAME = "data-telescope-meta-dos"
 CONTAINER_GET_OBJECTS_TIMER = 20
-CONTAINER_GET_OBJECTS_INTERVAL = 100000000 # 7200 # 2 hours
+CONTAINER_GET_OBJECTS_INTERVAL = 3600 # 1 hour
 
 # objects
-OBJECT_CLEAN_TIMER = 20
+OBJECT_CLEAN_TIMER = 60
 
 # crawls
-CRAWL_CONCURRENCY = 10
+CRAWL_CONCURRENCY = 3
 CRAWL_RETRIES = 3
-CRAWL_RETRIES_BACKOFF = 60
-CRAWL_REPEAT_INTERVAL = 3600 # 1 hour
-CRAWL_CACHE_INTERVAL = 3600 # 1 hour
-CRAWL_REQUEST_HEADER = {"User-Agent": "Mozilla/5.0 (Macintosh; U; Intel Mac OS X 10.10; rv:75.0) Gecko/20100101 Firefox/75.0"}
-CRAWL_REQUEST_TIMEOUT = 10
+CRAWL_RETRIES_BACKOFF = 5 # 5 -> 10 -> 20 seconds delay
+CRAWL_REPEAT_INTERVAL = 60
+CRAWL_CACHE_INTERVAL = 15
+CRAWL_REQUEST_HEADER = {}
+CRAWL_REQUEST_TIMEOUT = 20
+CRAWL_GET_WAIT_TIMER = 5
 
 # targets
-TARGET_MERGE_INTERVAL = 3600 # 1 hour
-TARGET_TTL = 10800 # 3 hours # how long to follow target from latest time of latest target line (including delay of reporting, also determines number of retr
-TARGET_CANDIDATE_CLEAN_TIMER = 20
+TARGET_MERGE_INTERVAL = 10
+TARGET_TTL = 180 # how long to follow target from latest time of latest target line (including delay of reporting, also determines number of retr
+TARGET_CANDIDATE_CLEAN_TIMER = 60
+TARGET_CONCURRENCY = 2
 
 # hosts
-HOST_CLEAN_TIMER = 20
-HOST_CACHE_INTERVAL = 3600 # 1 hour
+HOST_CLEAN_TIMER = 60
+HOST_CACHE_INTERVAL = 15
+HOST_MAX_NUM = 10
+HOST_CONCURRENCY = 2
 
 # dumps
-DUMP_CRON = "0 * * * *" # every hour at minute 0
+DUMP_CRON = "* * * * *" # every minute
 DUMP_DIR = "data/"
 DUMP_COMPRESS_LEVEL = 7
+
+SLACK_TOKEN = ""
+SLACK_CHANNEL = ""

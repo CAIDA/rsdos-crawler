@@ -43,11 +43,13 @@ class StreamContainer(Service):
         logging.info("Service to stream container is stopping.")
 
     @Service.timer(settings.CONTAINER_GET_OBJECTS_TIMER)
-    async def _get_objects(self, interval=settings.CONTAINER_GET_OBJECTS_INTERVAL):
+    async def _get_objects(self, container=settings.CONTAINER_NAME, interval=settings.CONTAINER_GET_OBJECTS_INTERVAL):
         """
         Get latest objects periodically from container
 
-        :param interval: [int, datetime.timedelta] time to look back for objects from now, e.g. 3,600 for all objects in
+        :param container: [str] name of container where objects should be taken from, default is taken from variable
+        CONTAINER_NAME in settings
+        :param interval: [int, datetime.timedelta] time to look back for objects from now, e.g. 3600 for all objects in
         last hour, default is taken from variable CONTAINER_GET_OBJECTS_INTERVAL in settings
         :return:
         """
@@ -55,11 +57,12 @@ class StreamContainer(Service):
         logging.info("Service to stream container is starting to get latest objects.")
 
         # get latest objects from container
-        objects = Container().get_objects(interval=interval)
+        objects = Container(name=container).get_objects(interval=interval)
+
+        # sort latest objects in ascending order of times
+        objects.sort(key=lambda object: object.time)
 
         for object in objects:
             # for each recent object in container
             # send object to change object topic
             await change_object_topic.send(key=f"add/{object.container}/{object.name}", value=object)
-
-        logging.info(f"Service to stream container has sent {len(objects)} objects to the object topic.")

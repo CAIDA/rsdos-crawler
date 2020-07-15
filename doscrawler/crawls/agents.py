@@ -10,17 +10,13 @@ This module defines the agents working on the crawls for the DoS crawler.
 
 """
 
-import asyncio
-import itertools
 import logging
-from datetime import datetime, timedelta
 from simple_settings import settings
 from doscrawler.app import app
-from doscrawler.targets.topics import target_topic
-from doscrawler.crawls.topics import get_crawl_topic, update_crawl_topic, wait_retry_crawl_topic, wait_repeat_crawl_topic
-from doscrawler.crawls.tables import crawl_table
+from doscrawler.targets.topics import change_target_topic
+from doscrawler.crawls.topics import get_crawl_topic, change_crawl_topic, change_wait_crawl_topic
+from doscrawler.crawls.tables import crawl_table, wait_crawl_table
 from doscrawler.crawls.models import Crawl
-from doscrawler.targets.models import Target
 
 
 @app.agent(get_crawl_topic, concurrency=settings.CRAWL_CONCURRENCY)
@@ -28,136 +24,137 @@ async def get_crawls(targets):
     """
     Process targets in order to crawl them
 
-    :param targets:
+    :param targets: [faust.types.streams.StreamT] stream of targets from get crawl topic
     :return:
     """
 
     logging.info("Agent to get crawls from targets is ready to receive targets.")
 
-    async for target in targets:
-        logging.info(f"Want to crawl target {target}")
-        # prepare target with failed hosts only
-        hosts_failed = {}
-        for host in target.hosts.keys():
-            # for each host in host group
+    async for target_key, target in targets.items():
+        # for each target to get crawled
+        # get host names for next crawl
+        next_crawl_hosts, next_crawl_type = target.get_next_crawl_hosts()
+
+        if next_crawl_type == "repeat":
+            # reset crawls on repeat
+            target.reset_crawls()
+
+        for host in next_crawl_hosts:
+            # for each host name of next crawl
             # look up host in crawl table
             target_host_crawl = crawl_table[host]
-            if target_host_crawl:
-                # host of target has already been crawled
-                # check timestamp
-                expire_time = datetime.now(settings.TIMEZONE).replace(tzinfo=None) - timedelta(seconds=settings.CRAWL_EXPIRE_INTERVAL - 1)
-                if target_host_crawl.time < expire_time:
-                    # renew expired crawl
-                    target_host_crawl = Crawl.get_crawl(host=host, ip=target.ip)
-                    # append crawl to host of target
-                    target.hosts[host].append(target_host_crawl)
-                    if target_host_crawl.status == "succeeded":
-                        # crawl successful
-                        # write crawl in crawl table
-                        await update_crawl_topic.send(value=target_host_crawl)
-                    else:
-                        # crawl unsuccessful
-                        # add host to failed hosts
-                        hosts_failed[host] = target.hosts[host]
-                else:
-                    # still valid crawl
-                    # append crawl to host of target
-                    target.hosts[host].append(target_host_crawl)
+
+            if target_host_crawl and target_host_crawl.is_valid:
+                # crawl of host is in table and still valid
+                # append crawl to host of target
+                target.hosts[host].append(target_host_crawl)
+
             else:
-                # host of target has no yet been crawled
+                # crawl of host is not in table or is not valid anymore
+                # get crawl
                 target_host_crawl = Crawl.get_crawl(host=host, ip=target.ip)
                 # append crawl to host of target
                 target.hosts[host].append(target_host_crawl)
-                if target_host_crawl.status == "succeeded":
-                    # crawl successful
-                    # write crawl in crawl table
-                    await update_crawl_topic.send(value=target_host_crawl)
+                # write crawl in crawl table
+                await change_crawl_topic.send(key=f"add/{host}", value=target_host_crawl)
+
+        # send to change target topic to update target
+        await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
+
+        # send to wait crawl topic to retry and repeat crawls
+        await change_wait_crawl_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
+
+
+@app.agent(change_wait_crawl_topic, concurrency=1)
+async def change_wait_crawls(targets):
+    """
+    Change wait crawl table in order to wait for retries and repeats
+
+    :param targets: [faust.types.streams.StreamT] stream of targets from change wait crawl topic
+    :return:
+    """
+
+    logging.info("Agent to change waiting crawls is ready to receive targets.")
+
+    async for target_key, target in targets.items():
+        if target_key.startswith("add"):
+            # target should be added
+            # get next crawl
+            target_next_time, target_next_type = target.get_next_crawl()
+
+            if target_next_time:
+                # target indeed needs to be retried or recrawled
+                # get currently waiting target
+                target_current = wait_crawl_table[f"{target.ip}/{target.start_time}"]
+
+                if target_current:
+                    # target is already waiting
+                    # get next crawl of already waiting target
+                    target_current_time, target_current_type = target_current.get_next_crawl()
+
+                    if target_next_type == target_current_type:
+                        # both targets have the same type
+                        if target_current_time > target_next_time:
+                            # next crawl is earlier than current crawl
+                            # replace target in table
+                            wait_crawl_table[f"{target.ip}/{target.start_time}"] = target
+
+                    else:
+                        # targets have different type
+                        if target_next_type == "retry-first":
+                            # target resets retry counter
+                            # replace target in table
+                            wait_crawl_table[f"{target.ip}/{target.start_time}"] = target
+
                 else:
-                    # crawl unsuccessful
-                    # add host to failed hosts
-                    hosts_failed[host] = target.hosts[host]
+                    # target is not yet waiting
+                    # add target in table
+                    wait_crawl_table[f"{target.ip}/{target.start_time}"] = target
 
-        # send to target topic to change target by crawls
-        await target_topic.send(value=target)
+        elif target_key.startswith("delete"):
+            # target has to be deleted
+            # get target from table and compare
+            target_current = wait_crawl_table[f"{target.ip}/{target.start_time}"]
 
-        # get number of retries
-        target_retries = target.get_no_retry_crawl()
+            if target_current:
+                # get currently waiting target
+                target_current_time, _ = target_current.get_next_crawl()
+                # get next target
+                target_next_time, _ = target.get_next_crawl()
 
-        if hosts_failed:
-            if target_retries < settings.CRAWL_RETRIES:
-                # all hosts of target have been crawled less than maximum retries
-                # prepare target with failed host only
-                target_failed = Target(ip=target.ip, start=target.start, target_lines=target.target_lines, hosts=hosts_failed)
-                # send to wait retry crawl topic to retry crawl hosts later
-                await wait_retry_crawl_topic.send(value=target_failed)
-
-        # check if repeats needed for target
-        if target.get_ttl() > settings.CRAWL_REPEAT_INTERVAL:
-            # send to wait repeat crawl topic to repeat crawl
-            await wait_repeat_crawl_topic.send(value=target)
+                if target_current_time == target_next_time:
+                    # delete host from host table when has not changed
+                    wait_crawl_table.pop(f"{target.ip}/{target.start_time}")
 
 
-@app.agent(wait_retry_crawl_topic)
-async def wait_retry_crawls(targets):
+@app.agent(change_crawl_topic)
+async def change_crawls(crawls):
     """
-    Wait for delay before retrying crawling target again
+    Change crawl table by crawled and changed crawls
 
-    :param targets:
+    :param crawls: [faust.types.streams.StreamT] stream of crawls from change crawl topic
     :return:
     """
 
-    logging.info("Agent to wait to retry crawls is ready to receive targets.")
+    logging.info("Agent to change crawls is ready to receive crawls.")
 
-    async for target in targets:
-        # get delay from latest request time and desired delay in settings
-        latest_time = max([crawl.time for crawl in itertools.chain.from_iterable(target.hosts.values())])
-        retry_time = latest_time + timedelta(seconds=settings.CRAWL_RETRIES_INTERVAL)
-        delay = (retry_time - datetime.now(settings.TIMEZONE).replace(tzinfo=None)).total_seconds()
+    async for crawl_key, crawl in crawls.items():
+        if crawl_key.startswith("add"):
+            # crawl has to be added
+            # update crawl in crawl table
+            crawl_table[crawl.host] = crawl
 
-        # wait
-        if delay > 0:
-            await asyncio.sleep(delay)
+        elif crawl_key.startswith("delete"):
+            # crawl has to be deleted
+            # look up crawl in crawl table
+            crawl_current = crawl_table[crawl.host]
 
-        # send to get crawl topic to crawl target again
-        await get_crawl_topic.send(value=target)
+            if crawl_current and crawl_current.time == crawl.time:
+                # delete crawl from crawl table
+                crawl_table.pop(crawl.host)
 
-
-@app.agent(wait_repeat_crawl_topic)
-async def wait_repeat_crawls(targets):
-    """
-    Wait for delay before repeating crawling target
-
-    :param targets:
-    :return:
-    """
-
-    logging.info("Agent to wait to repeat crawls is ready to receive targets.")
-
-    async for target in targets:
-        # get delay from latest request time and desired delay in settings
-        latest_time = max([crawl.time for crawl in itertools.chain.from_iterable(target.hosts.values())])
-        retry_time = latest_time + timedelta(seconds=settings.CRAWL_REPEAT_INTERVAL)
-        delay = (retry_time - datetime.now(settings.TIMEZONE).replace(tzinfo=None)).total_seconds()
-
-        # wait
-        if delay > 0:
-            await asyncio.sleep(delay)
-
-        # send to get crawl topic to crawl target
-        await get_crawl_topic.send(value=target)
-
-
-@app.agent(update_crawl_topic)
-async def update_crawls(crawls):
-    """
-    Update crawl table by crawled and changed crawls
-
-    :param crawls:
-    :return:
-    """
-
-    logging.info("Agent to update crawls is ready to receive crawls.")
-
-    async for crawl in crawls:
-        # update host group in host table
-        crawl_table[crawl.host] = crawl
+        else:
+            raise Exception(
+                f"Agent to change crawls raised an exception because a crawl has an unknown action. The key of the " \
+                f"crawl is {crawl_key}."
+            )

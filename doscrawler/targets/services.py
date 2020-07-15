@@ -12,7 +12,6 @@ This module defines the services of the targets for the DoS crawler.
 
 import logging
 from mode import Service
-from datetime import datetime, timedelta, timezone
 from simple_settings import settings
 from doscrawler.app import app
 from doscrawler.targets.tables import target_candidate_table
@@ -53,13 +52,12 @@ class TargetService(Service):
 
         logging.info("Service to maintain target candidates is starting to clean target candidates.")
 
-        # get target candidates to be cleaned
-        clean_time = datetime.now(timezone.utc) - timedelta(seconds=settings.TARGET_MERGE_INTERVAL)
+        for target_candidate_key in list(target_candidate_table.keys()):
+            # for each target candidate
+            # look up target candidate in table
+            target_candidate = target_candidate_table[target_candidate_key]
 
-        for target_candidate_key, target_candidate in target_candidate_table.items():
-            if target_candidate.latest_time < clean_time:
-                # for each expired target candidate
+            if target_candidate and not target_candidate.is_alive:
+                # for each expired target candidate in table
                 # send target candidate to change target candidate topic for deletion
                 await change_target_candidate_topic.send(key=f"delete/{target_candidate.ip}", value=target_candidate)
-
-        logging.info(f"Service to maintain targets has send target candidates for deletion.")

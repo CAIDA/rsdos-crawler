@@ -17,9 +17,7 @@ import gzip
 from io import BytesIO
 from faust import Record
 from datetime import datetime
-from warcio.timeutils import datetime_to_iso_date
 from simple_settings import settings
-from doscrawler.targets.models import Target
 from doscrawler.targets.tables import target_table
 from doscrawler.targets.topics import change_target_topic
 
@@ -46,19 +44,7 @@ class Dump(Record):
         return dump
 
     @staticmethod
-    def _get_time_str(time):
-        """
-        Get time string
-
-        :param time: [datetime.datetime] datetime to be transformed in string
-        :return: [str] transformed datetime string
-        """
-
-        time_str = datetime_to_iso_date(the_datetime=time)
-
-        return time_str
-
-    def _get_name(self, time):
+    def _get_name(time):
         """
         Get name of dump with time
 
@@ -66,10 +52,19 @@ class Dump(Record):
         :return: [str] name of dump
         """
 
-        time_str = self._get_time_str(time=time)
+        time_str = time.strftime("%Y%m%d%H%M%S")
         name = f"data-telescope-crawler-dos-{time_str}"
 
         return name
+
+    @staticmethod
+    def json_serializer(field):
+        """
+        Serialize field in dictionary for JSON
+        """
+
+        if isinstance(field, datetime):
+            return field.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
     def _get_default_dir(self):
         """
@@ -80,9 +75,11 @@ class Dump(Record):
 
         dir = os.path.join(settings.DUMP_DIR, f"{self.name}.json.gz")
 
+        os.makedirs(settings.DUMP_DIR, exist_ok=True)
+
         return dir
 
-    def _get_targets(self):
+    async def _get_targets(self):
         """
         Get targets for dump
 
@@ -92,30 +89,37 @@ class Dump(Record):
         targets = []
 
         # get all targets whose time to live has expired
-        for target in target_table:
-            # for every target in the target table
-            if target.get_ttl(time=self.time) <= 0:
-                # time to live has expired
-                # prepare uncompressed hosts
-                target_uncomp_hosts = {host: [gzip.GzipFile(fileobj=BytesIO(base64.b64decode(crawl))).read().decode("utf-8") for crawl in crawls] for host, crawls in target.hosts.items()}
+        for target_key in list(target_table.keys()):
+            # for each target
+            # look up target in table
+            target = target_table[target_key]
 
-                # create uncompressed target
-                target_uncomp = Target(ip=target.ip, start_time=target.start_time, latest_time=target.latest_time, target_lines=target.target_lines, hosts=target_uncomp_hosts)
+            if target and not target.is_alive:
+                # target still exists in table and its time to live has expired
+                # get target as dictionary
+                target_dict = target.asdict()
+
+                # prepare nested fields in dictionary
+                # uncompress crawls
+                target_dict["hosts"] = {host: sorted([{"record": gzip.GzipFile(fileobj=BytesIO(base64.b64decode(crawl.record))).read().decode("utf-8"), "status": crawl.status, "time": crawl.time} for crawl in crawls], key=lambda crawl: crawl.get("time")) for host, crawls in sorted(target.hosts.items())}
+                target_dict["target_lines"] = sorted([target_line.asdict() for target_line in target.target_lines], key=lambda target_line: target_line.get("latest_time"))
 
                 # append uncompressed target to dump of targets
-                targets.append(target_uncomp.dumps())
+                targets.append(target_dict)
 
                 # send target to change target topic for deletion
                 await change_target_topic.send(key=f"delete/{target.ip}/{target.start_time}", value=target)
 
         return targets
 
-    def write(self, dir=None):
+    async def write(self, dir=None):
         """
         Write dump in file
 
         :param dir: [str, os.path] file directory and name where to write dump
-        :return: [float] time to live in seconds, can be negative
+        :return: [str] name of written dump
+        :return: [str] time of written dump
+        :return: [int] number of targets in written dump
         """
 
         if not dir:
@@ -124,10 +128,12 @@ class Dump(Record):
         # prepare dump as dictionary
         dump = {
             "name": self.name,
-            "time": self._get_time_str(),
-            "targets": self._get_targets()
+            "time": self.time,
+            "targets": await self._get_targets()
         }
 
         # write dump as gzip
         with gzip.GzipFile(filename=dir, mode="w", compresslevel=settings.DUMP_COMPRESS_LEVEL) as file:
-            file.write(bytes(json.dumps(dump), encoding="utf-8"))
+            file.write(bytes(json.dumps(dump, default=self.json_serializer), encoding="utf-8"))
+
+        return dump["name"], dump["time"], len(dump["targets"])

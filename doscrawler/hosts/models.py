@@ -11,9 +11,11 @@ This module defines the models of the hosts for the DoS crawler.
 """
 
 import socket
-from datetime import datetime, timezone
-from faust import Record
+import random
 from typing import List
+from datetime import datetime, timezone, timedelta
+from simple_settings import settings
+from faust import Record
 
 
 class HostGroup(Record, coerce=True, serializer="json"):
@@ -50,8 +52,32 @@ class HostGroup(Record, coerce=True, serializer="json"):
         try:
             # get hosts
             hostname, aliaslist, _ = socket.gethostbyaddr(ip)
-            host_group = list(set([ip, hostname] + aliaslist))
-            return host_group
+            names = list(set([ip, hostname] + aliaslist))
+
+            if len(names) > settings.HOST_MAX_NUM:
+                # hosts exceed number of maximum hosts
+                # get random seed
+                random.seed(ip)
+                # get random sample of hosts
+                names = random.sample(names, k=settings.HOST_MAX_NUM)
+
         except socket.herror as e:
             # return only ip address on address-related errors
-            return [ip]
+            names = [ip]
+
+        return names
+
+    @property
+    def is_valid(self):
+        """
+        Check if host group is still valid according to expire interval
+
+        :return: [bool] check if host group is still valid
+        """
+
+        expire_time = datetime.now(timezone.utc) - timedelta(seconds=settings.HOST_CACHE_INTERVAL)
+
+        if self.time > expire_time:
+            return True
+
+        return False

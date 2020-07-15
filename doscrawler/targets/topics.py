@@ -19,6 +19,7 @@ get_target_topic = app.topic(
     "doscrawler-target-get",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.CONTAINER_GET_OBJECTS_INTERVAL,
+    key_type=str,
     value_type=TargetLine
 )
 

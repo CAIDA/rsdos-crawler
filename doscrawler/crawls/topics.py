@@ -17,29 +17,39 @@ from doscrawler.crawls.models import Crawl
 
 
 get_crawl_topic = app.topic(
-    "doscrawler-crawls-find",
+    "doscrawler-crawl-get",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.RETENTION_INTERVAL,
+    key_type=str,
     value_type=Target
 )
 
-wait_retry_crawl_topic = app.topic(
-    "doscrawler-crawls-wait-retry",
+change_crawl_topic = app.topic(
+    "doscrawler-crawl-change",
     partitions=settings.TOPIC_PARTITIONS,
-    retention=settings.RETENTION_INTERVAL,
-    value_type=Target
-)
-
-wait_repeat_crawl_topic = app.topic(
-    "doscrawler-crawls-wait-repeat",
-    partitions=settings.TOPIC_PARTITIONS,
-    retention=settings.RETENTION_INTERVAL,
-    value_type=Target
-)
-
-update_crawl_topic = app.topic(
-    "doscrawler-crawls-update",
-    partitions=settings.TOPIC_PARTITIONS,
-    retention=settings.RETENTION_INTERVAL,
+    retention=settings.CRAWL_CACHE_INTERVAL,
+    key_type=str,
     value_type=Crawl
+)
+
+change_wait_crawl_topic = app.topic(
+    "doscrawler-crawl-wait-change",
+    partitions=settings.TOPIC_PARTITIONS,
+    retention=settings.RETENTION_INTERVAL,
+    key_type=str,
+    value_type=Target
+)
+
+log_crawl_topic = app.topic(
+    "doscrawler-crawl-log",
+    partitions=settings.TOPIC_PARTITIONS,
+    retention=settings.CRAWL_CACHE_INTERVAL,
+    value_type=Crawl
+)
+
+log_wait_crawl_topic = app.topic(
+    "doscrawler-crawl-wait-log",
+    partitions=settings.TOPIC_PARTITIONS,
+    retention=settings.RETENTION_INTERVAL,
+    value_type=Target
 )

@@ -49,37 +49,51 @@ class Target(Record, coerce=True, serializer="json"):
     target_lines: List[TargetLine]
     hosts: Dict[str, List[Crawl]] = {}
 
+    @property
+    def is_ready_crawl(self):
+        """
+        Check if target is ready to be crawled
+
+        :return: [bool] target is ready to be crawled
+        """
+
+        current_time = datetime.now(timezone.utc)
+        next_crawl_time, _ = self.get_next_crawl()
+
+        if next_crawl_time <= current_time:
+            return True
+
+        return False
+
+    @property
+    def is_alive(self):
+        """
+        Check if target is alive
+
+        :return: [bool] target is alive
+        """
+
+        time_current = datetime.now(timezone.utc)
+
+        if self.get_ttl(time=time_current) > 0:
+            return True
+
+        return False
+
     def is_mergable_target_line(self, target_line):
         """
         Checks if new target line can be merged with target
 
         :param target_line: [doscrawler.targets.models.TargetLine] target line to be checked if can be merged with target
-        :return: [bool] boolean if target line is mergable with target
+        :return: [bool] target line can be merged with target
         """
 
         latest_merge_time = self.latest_time + timedelta(seconds=settings.TARGET_MERGE_INTERVAL)
-        merge_time = target_line.start_time
 
-        if latest_merge_time > merge_time:
+        if latest_merge_time >= target_line.start_time:
             return True
 
         return False
-
-    def get_time_latest_crawl(self):
-        """
-        Get time of latest crawl of any of the hosts of the target
-
-        :return: [datetime.datetime]
-        """
-
-        crawls_all = [crawl.time for crawl in itertools.chain.from_iterable(self.hosts.values())]
-
-        if crawls_all:
-             # target has already been crawled
-             return max(crawls_all)
-        else:
-            # target has not yet been crawled
-            return
 
     def get_ttl(self, time=None):
         """
@@ -89,92 +103,163 @@ class Target(Record, coerce=True, serializer="json"):
         :return: [float] time to live in seconds, can be negative
         """
 
-        # get end time by latest time and target ttl in settings
-        end_time = self.latest_time + timedelta(seconds=settings.TARGET_TTL)
-
         if not time:
-            # get remaining time without time stamp
-            current_time = datetime.now(timezone.utc)
-            remaining_time = (end_time - current_time).total_seconds()
-        else:
-            # get ramaining time with time stamp
-            remaining_time = (end_time - time).total_seconds()
+            time = datetime.now(timezone.utc)
+
+        end_time = self.latest_time + timedelta(seconds=settings.TARGET_TTL)
+        remaining_time = (end_time - time).total_seconds()
 
         return remaining_time
 
-    def get_time_next_crawl(self, crawl_type):
+    def get_time_latest_crawl(self, host_names=None):
         """
-        Get time to crawl target for the next time according to the type of crawl
+        Get time of latest crawl of any of the hosts of the target
 
-        :param crawl_type: [str] type of crawl to be made, either "retry" or "recrawl"
-        :return: [datetime.datetime] datetime when next crawl of specified type can be made
+        :param host_names: [list] list of host names to be checked for next crawl, default is to consider all host names
+        :return: [datetime.datetime] time of latest crawl according to host names
         """
 
-        if crawl_type == "retry":
-            # time should be computed for retry of target
-            # get numbers of failed crawls in recent interval
-            interval_start = datetime.now(timezone.utc) - timedelta(seconds=settings.CRAWL_REPEAT_INTERVAL)
-            interval_crawls_failed = [sum([host_crawl.time > interval_start and host_crawl.status == "failed" for host_crawl in host_crawls]) for host_crawls in self.hosts.values()]
+        if not host_names:
+            host_names = self.hosts.keys()
 
-            if interval_crawls_failed:
-                # target has already been crawled
-                # get maximum number of crawls on any hosts of the target
-                interval_crawls = max(interval_crawls_failed)
+        host_crawls = [self.hosts.get(host_name) for host_name in host_names]
+        host_crawls_time = [crawl.time for crawl in itertools.chain.from_iterable(host_crawls)]
 
-                if interval_crawls == 0:
-                    # no crawls on target have failed
-                    # return no retry
-                    return
-                elif interval_crawls > settings.CRAWL_RETRIES:
-                    # target has already been crawled more than maximum number of retries
-                    # return no retry
-                    return
-                else:
-                    # target has failed crawls and has not yet been crawled more than maximum number of retries
-                    # get time of latest crawl
-                    time_latest = self.get_time_latest_crawl()
+        if host_crawls_time:
+            return max(host_crawls_time)
 
-                    # get time of next crawl
-                    time_backoff = 2 ** (interval_crawls - 1) * settings.CRAWL_RETRIES_BACKOFF
-                    time_retry = time_latest + timedelta(seconds=time_backoff)
+        return
 
-                    # verify time in ttl
-                    if self.get_ttl(time=time_retry) < 0:
-                        # at time of retry the target will not be alive anymore
-                        # return no retry
-                        return
+    def get_time_initial_crawl(self, host_names=None):
+        """
+        Get time of initial crawl of any of the hosts of the target
 
-                    return time_retry
-            else:
-                # target has not yet been crawled
-                # get current time to crawl
-                time_retry = datetime.now(timezone.utc)
+        :param host_names: [list] list of host names to be checked for next crawl, default is to consider all host names
+        :return: [datetime.datetime] time of initial crawl according to host names
+        """
 
-                return time_retry
+        if not host_names:
+            host_names = self.hosts.keys()
 
-        elif crawl_type == "recrawl":
-            # time should be computed for recrawl of target
-            # get time of latest crawl
-            time_latest = self.get_time_latest_crawl()
+        host_crawls = [self.hosts.get(host_name) for host_name in host_names]
+        host_crawls_time = [crawl.time for crawl in itertools.chain.from_iterable(host_crawls)]
 
-            if time_latest:
-                # target has already been crawled
-                # get time of next crawl
-                time_recrawl = time_latest + timedelta(seconds=settings.CRAWL_REPEAT_INTERVAL)
+        if host_crawls_time:
+            return min(host_crawls_time)
 
-                # verify time in ttl
-                if self.get_ttl(time=time_recrawl) < 0:
-                    # at time of recrawl the target will not be alive anymore
-                    # return no recrawl
-                    return
+        return
 
-                return time_recrawl
-            else:
-                # target has not yet been crawled
-                # get current time to recrawl
-                time_recrawl = datetime.now(timezone.utc)
+    def get_next_crawl(self, host_names=None):
+        """
+        Get time and type of next crawl according to host names of target
 
-                return time_recrawl
+        :param host_names: [list] list of host names to be checked for next crawl, default is to consider all host names
+        :return: [datetime.datetime] datetime when next crawl can be made
+        :return: [str] type of crawl of next crawl, e.g. "retry", "recrawl"
+        """
+
+        if not host_names:
+            host_names = self.hosts.keys()
+
+            if not host_names:
+                # check if host names still empty
+                # no host names to crawl
+                return None, None
+
+        # get number of crawls
+        host_names_crawls_num = min([len(self.hosts.get(host_name)) for host_name in host_names])
+
+        if not host_names_crawls_num:
+            # target has not yet been crawled
+            # return crawl
+            next_crawl_type = "crawl"
+            next_crawl_time = self.start_time
 
         else:
-            raise ValueError("Crawl type must either be retry of recrawl.")
+            # target has already been crawled
+            # get if any most recent crawls failed
+            host_names_crawls_failed = any([max(self.hosts.get(host_name), key=lambda crawl: crawl.time).is_success is False for host_name in host_names])
+
+            if not host_names_crawls_failed:
+                # all most recent crawls on hosts succeeded
+                # return repeat
+                next_crawl_type = "repeat"
+                next_crawl_time = self.get_time_initial_crawl(host_names=host_names) + timedelta(seconds=settings.CRAWL_REPEAT_INTERVAL)
+
+            else:
+                # any of the most recent crawls on hosts failed
+                if host_names_crawls_num <= settings.CRAWL_RETRIES:
+                    # not yet been crawled more than maximum number of retries
+                    if host_names_crawls_num == 1:
+                        # return first retry
+                        next_crawl_type = "retry-first"
+                    else:
+                        # return retry
+                        next_crawl_type = "retry"
+                    # compute time for retry
+                    next_crawl_time = self.get_time_latest_crawl(host_names=host_names) + timedelta(seconds=2**(host_names_crawls_num-1)*settings.CRAWL_RETRIES_BACKOFF)
+
+                else:
+                    # already crawled more than maximum number of retries
+                    # return repeat
+                    next_crawl_type = "repeat"
+                    # compute time for repeat
+                    next_crawl_time = self.get_time_initial_crawl(host_names=host_names) + timedelta(seconds=settings.CRAWL_REPEAT_INTERVAL)
+
+        if self.get_ttl(time=next_crawl_time) > 0:
+            # target will still be alive at next crawl
+            return next_crawl_time, next_crawl_type
+
+        else:
+            # target will not be alive at next crawl anymore
+            return None, None
+
+    def get_next_crawl_hosts(self, host_names=None):
+        """
+        Get host names for next crawl according to host names
+
+        :param host_names: [list] list of host names to be checked for next crawl, default is to consider all host names
+        :return: [list] list of host names which need to be recrawled on next crawl
+        :return: [str] type of crawl of next crawl, e.g. "retry", "recrawl"
+        """
+
+        if not host_names:
+            host_names = self.hosts.keys()
+
+        # get next crawl type of all hosts
+        _, next_crawl_type = self.get_next_crawl(host_names=host_names)
+
+        if next_crawl_type:
+            # any host needs crawl
+            if next_crawl_type == "crawl":
+                # any host needs initial crawl
+                # get hosts
+                next_crawl_hosts = [host_name for host_name in host_names if self.get_next_crawl(host_names=[host_name])[1] == "crawl"]
+            elif next_crawl_type == "retry-first":
+                # any host needs to retry first
+                # get hosts
+                next_crawl_hosts = [host_name for host_name in host_names if self.get_next_crawl(host_names=[host_name])[1] == "retry-first"]
+            elif next_crawl_type == "retry":
+                # any host needs to retry
+                # get hosts
+                next_crawl_hosts = [host_name for host_name in host_names if self.get_next_crawl(host_names=[host_name])[1] == "retry"]
+            elif next_crawl_type == "repeat":
+                # all host names need to repeat
+                next_crawl_hosts = host_names
+            else:
+                # no host needs any crawl
+                next_crawl_hosts = []
+        else:
+            # no host needs any crawl
+            next_crawl_hosts = []
+
+        return next_crawl_hosts, next_crawl_type
+
+    def reset_crawls(self):
+        """
+        Reset crawls of hosts
+
+        :return:
+        """
+
+        self.hosts = {host: [] for host in self.hosts.keys()}
