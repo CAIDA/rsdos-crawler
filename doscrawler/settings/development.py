@@ -56,7 +56,7 @@ RETENTION_INTERVAL = 86400 # 1 day
 
 # containers
 CONTAINER_NAME = "data-telescope-meta-dos"
-CONTAINER_GET_OBJECTS_TIMER = 20
+CONTAINER_GET_OBJECTS_TIMER = 60
 CONTAINER_GET_OBJECTS_INTERVAL = 3600 # 1 hour
 
 # objects
@@ -70,22 +70,22 @@ CRAWL_REPEAT_INTERVAL = 60
 CRAWL_CACHE_INTERVAL = 15
 CRAWL_REQUEST_HEADER = {}
 CRAWL_REQUEST_TIMEOUT = 20
-CRAWL_GET_WAIT_TIMER = 5
+CRAWL_GET_WAIT_TIMER = 1
 
 # targets
-TARGET_MERGE_INTERVAL = 10
-TARGET_TTL = 180 # how long to follow target from latest time of latest target line (including delay of reporting, also determines number of retr
+TARGET_MERGE_INTERVAL = 30
+TARGET_TTL = 200 # how long to follow target from latest time of latest target line (including delay of reporting, also determines number of retr
 TARGET_CANDIDATE_CLEAN_TIMER = 60
 TARGET_CONCURRENCY = 2
 
 # hosts
 HOST_CLEAN_TIMER = 60
-HOST_CACHE_INTERVAL = 15
+HOST_CACHE_INTERVAL = 60
 HOST_MAX_NUM = 10
 HOST_CONCURRENCY = 2
 
 # dumps
-DUMP_CRON = "* * * * *" # every minute
+DUMP_CRON = "*/5 * * * *" # every five minutes
 DUMP_DIR = "data/"
 DUMP_COMPRESS_LEVEL = 7
 

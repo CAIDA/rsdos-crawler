@@ -88,10 +88,11 @@ class Target(Record, coerce=True, serializer="json"):
         :return: [bool] target line can be merged with target
         """
 
-        latest_merge_time = self.latest_time + timedelta(seconds=settings.TARGET_MERGE_INTERVAL)
+        if self.ip == target_line.target_ip:
+            latest_merge_time = self.latest_time + timedelta(seconds=settings.TARGET_MERGE_INTERVAL)
 
-        if latest_merge_time >= target_line.start_time:
-            return True
+            if latest_merge_time >= target_line.start_time:
+                return True
 
         return False
 
