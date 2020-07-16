@@ -41,29 +41,14 @@ async def change_objects(objects):
                 # log got new unprocessed object
                 logging.info(f"Agent to process objects is working on a new unprocessed object {object.container}/{object.name}.")
 
-                ########################################################################################################
-                # TODO: use non-random target lines                                                                    #
-                ########################################################################################################
+                # get target lines from object
+                target_lines = object.get_target_lines()
 
-                ## get target lines from object
-                #target_lines = object.get_target_lines()
-                #
-                ## send target lines to topic
-                #for target_line in target_lines:
-                #   # for each target line in object
-                #   # send target line to get target topic
-                #    await get_target_topic.send(key=target_line.target_ip, value=target_line)
-
-                ########################################################################################################
-
-                target_lines = object.get_random_target_lines()
-
+                # send target lines to topic
                 for target_line in target_lines:
                     # for each target line in object
                     # send target line to get target topic
                     await get_target_topic.send(key=target_line.target_ip, value=target_line)
-
-                ########################################################################################################
 
                 # mark in table object as processed
                 object_table[f"{object.container}/{object.name}"] = object
