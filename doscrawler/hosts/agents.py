@@ -40,7 +40,7 @@ async def get_hosts(targets):
             if not target_host_group_current.is_valid:
                 # host group is not valid anymore
                 # create and resolve host group
-                target_host_group = HostGroup.create_hostgroup_from_ip(ip=target.ip)
+                target_host_group = await HostGroup.create_hostgroup_from_ip(ip=target.ip)
                 # send host group to host topic
                 await change_host_topic.send(key=f"add/{target.ip}", value=target_host_group)
                 # add hosts to target with empty crawls
@@ -54,7 +54,7 @@ async def get_hosts(targets):
         else:
             # hosts of target have not yet been resolved
             # create and resolve host group
-            target_host_group = HostGroup.create_hostgroup_from_ip(ip=target.ip)
+            target_host_group = await HostGroup.create_hostgroup_from_ip(ip=target.ip)
             # send to host topic to update hosts
             await change_host_topic.send(key=f"add/{target.ip}", value=target_host_group)
             # add hosts to target with empty crawls

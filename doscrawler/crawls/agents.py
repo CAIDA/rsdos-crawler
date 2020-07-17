@@ -52,7 +52,7 @@ async def get_crawls(targets):
             else:
                 # crawl of host is not in table or is not valid anymore
                 # get crawl
-                target_host_crawl = Crawl.get_crawl(host=host, ip=target.ip)
+                target_host_crawl = await Crawl.get_crawl(host=host, ip=target.ip)
                 # append crawl to host of target
                 target.hosts[host].append(target_host_crawl)
                 # write crawl in crawl table

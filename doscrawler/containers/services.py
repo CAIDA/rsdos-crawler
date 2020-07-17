@@ -57,7 +57,7 @@ class StreamContainer(Service):
         logging.info("Service to stream container is starting to get latest objects.")
 
         # get latest objects from container
-        objects = Container(name=container).get_objects(interval=interval)
+        objects = await Container(name=container).get_objects(interval=interval)
 
         # sort latest objects in ascending order of times
         objects.sort(key=lambda object: object.time)

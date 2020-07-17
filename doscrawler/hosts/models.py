@@ -28,7 +28,7 @@ class HostGroup(Record, coerce=True, serializer="json"):
     time: datetime
 
     @classmethod
-    def create_hostgroup_from_ip(cls, ip):
+    async def create_hostgroup_from_ip(cls, ip):
         """
         Create host group from ip
 

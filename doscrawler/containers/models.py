@@ -24,7 +24,7 @@ class Container(Record, serializer="json"):
 
     name: str
 
-    def get_objects(self, interval):
+    async def get_objects(self, interval):
         """
         Get latest objects from container
 

@@ -36,7 +36,7 @@ class Crawl(Record, coerce=True, serializer="json"):
     time: datetime
 
     @classmethod
-    def get_crawl(cls, host, ip):
+    async def get_crawl(cls, host, ip):
         """
         Get crawl from host
 
@@ -45,7 +45,7 @@ class Crawl(Record, coerce=True, serializer="json"):
         :return: [doscrawler.crawls.models.Crawl] crawl of host of target
         """
 
-        record, status, time = cls._crawl_host(host, ip)
+        record, status, time = await cls._crawl_host(host, ip)
         crawl = cls(host=host, record=record, status=status, time=time)
 
         return crawl
@@ -87,7 +87,7 @@ class Crawl(Record, coerce=True, serializer="json"):
         return False
 
     @staticmethod
-    def _crawl_host(host, ip):
+    async def _crawl_host(host, ip):
         """
         Crawl host
 
@@ -123,7 +123,7 @@ class Crawl(Record, coerce=True, serializer="json"):
             # send request
             session = requests.Session()
             session.verify = False
-            response = session.send(request, stream=True, timeout=settings.CRAWL_REQUEST_TIMEOUT)
+            response = await session.send(request, stream=True, timeout=settings.CRAWL_REQUEST_TIMEOUT)
 
             ## raise on bad request (4XX client error or 5XX server error response)
             #response.raise_for_status()

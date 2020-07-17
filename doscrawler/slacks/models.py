@@ -48,7 +48,7 @@ class Slack(Record, coerce=True, serializer="json"):
 
         return text
 
-    def send(self):
+    async def send(self):
         """
         Send slack
 

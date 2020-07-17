@@ -28,4 +28,4 @@ async def get_slacks(slacks):
 
     async for slack in slacks:
         # send slack message
-        slack.send()
+        await slack.send()

@@ -72,7 +72,7 @@ class Object(Record, coerce=True, serializer="json"):
 
         return in_interval
 
-    def get_target_lines(self):
+    async def get_target_lines(self):
         """
         Get target lines from object
 

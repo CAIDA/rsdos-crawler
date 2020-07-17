@@ -42,7 +42,7 @@ async def change_objects(objects):
                 logging.info(f"Agent to process objects is working on a new unprocessed object {object.container}/{object.name}.")
 
                 # get target lines from object
-                target_lines = object.get_target_lines()
+                target_lines = await object.get_target_lines()
 
                 # send target lines to topic
                 for target_line in target_lines:
