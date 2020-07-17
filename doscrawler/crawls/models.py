@@ -12,7 +12,7 @@ This module defines the models of the crawls for the DoS crawler.
 
 import json
 import base64
-import requests
+import aiohttp
 from io import BytesIO
 from faust import Record
 from datetime import datetime, timezone, timedelta
@@ -20,9 +20,6 @@ from simple_settings import settings
 from warcio.warcwriter import BufferWARCWriter
 from warcio.statusandheaders import StatusAndHeaders
 from warcio.timeutils import iso_date_to_datetime
-
-
-requests.packages.urllib3.disable_warnings()
 
 
 class Crawl(Record, coerce=True, serializer="json"):
@@ -110,36 +107,28 @@ class Crawl(Record, coerce=True, serializer="json"):
         # define warc writer
         warc_writer = BufferWARCWriter(warc_version="1.1", gzip=True)
 
-        # prepare request
-        request = requests.Request(method="GET", url=host_schema, headers=settings.CRAWL_REQUEST_HEADER).prepare()
-
         # prepare write request
-        warc_request_headers = StatusAndHeaders("GET / HTTP/1.1", request.headers, is_http_request=True)
-        warc_request = warc_writer.create_warc_record(host_schema, "request", http_headers=warc_request_headers,
-                                                      warc_content_type="application/http; msgtype=request")
+        warc_request_headers = StatusAndHeaders("GET / HTTP/1.1", settings.CRAWL_REQUEST_HEADER, is_http_request=True)
+        warc_request = warc_writer.create_warc_record(host_schema, "request", http_headers=warc_request_headers, warc_content_type="application/http; msgtype=request")
 
         try:
             # try to get response on request
             # send request
-            session = requests.Session()
-            session.verify = False
-            response = await session.send(request, stream=True, timeout=settings.CRAWL_REQUEST_TIMEOUT)
-
-            ## raise on bad request (4XX client error or 5XX server error response)
-            #response.raise_for_status()
-
-            # prepare write response
-            warc_response_payload = response.text.encode("utf-8")
-            warc_response_status = f"{response.status_code} {requests.status_codes._codes[response.status_code][0]}"
-            warc_response_headers = StatusAndHeaders(warc_response_status, response.headers, protocol="HTTP/1.1")
-            warc_response = warc_writer.create_warc_record(uri=host_schema, record_type="response",
-                                                           payload=BytesIO(warc_response_payload),
-                                                           length=len(warc_response_payload),
-                                                           http_headers=warc_response_headers,
-                                                           warc_content_type="application/http; msgtype=response")
+            async with aiohttp.ClientSession() as session:
+                async with session.get(host_schema, timeout=aiohttp.ClientTimeout(total=settings.CRAWL_REQUEST_TIMEOUT), headers=settings.CRAWL_REQUEST_HEADER, ssl=False) as response:
+                    warc_response_payload = await response.text()
+                    warc_response_payload = warc_response_payload.encode("utf-8")
+                    warc_response_status = f"{response.status}"
+                    warc_response_headers = StatusAndHeaders(warc_response_status, response.headers,
+                                                             protocol="HTTP/1.1")
+                    warc_response = warc_writer.create_warc_record(uri=host_schema, record_type="response",
+                                                                   payload=BytesIO(warc_response_payload),
+                                                                   length=len(warc_response_payload),
+                                                                   http_headers=warc_response_headers,
+                                                                   warc_content_type="application/http; msgtype=response")
 
             # change status
-            status = response.status_code
+            status = response.status
         except Exception as e:
             # raised exception while request
             # prepare write metadata as response

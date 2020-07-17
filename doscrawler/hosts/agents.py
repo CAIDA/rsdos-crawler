@@ -60,8 +60,8 @@ async def get_hosts(targets):
             # add hosts to target with empty crawls
             target.hosts = {host: [] for host in target_host_group.names}
 
-        ## send to change target topic to update target with intermediate result of host names
-        #await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
+        # send to change target topic to update target with intermediate result of host names
+        await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
 
         # send to get crawl topic to crawl hosts
         await get_crawl_topic.send(key=f"{target.ip}/{target.start_time}", value=target)

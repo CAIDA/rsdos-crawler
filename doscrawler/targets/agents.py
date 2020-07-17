@@ -51,8 +51,8 @@ async def get_targets(target_lines):
         # send target candidate to change target candidate topic for update
         await change_target_candidate_topic.send(key=f"add/{target.ip}", value=target)
 
-        ## send to change target topic to update target with intermediate result of target lines
-        #await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
+        # send to change target topic to update target with intermediate result of target lines
+        await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
 
         # send target to get host topic to get host names
         await get_host_topic.send(key=f"{target.ip}/{target.start_time}", value=target)
