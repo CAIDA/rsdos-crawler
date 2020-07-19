@@ -11,6 +11,7 @@ This module defines the agents working on the crawls for the DoS crawler.
 """
 
 import logging
+import aiohttp
 from simple_settings import settings
 from doscrawler.app import app
 from doscrawler.targets.topics import change_target_topic
@@ -29,6 +30,9 @@ async def get_crawls(targets):
     """
 
     logging.info("Agent to get crawls from targets is ready to receive targets.")
+
+    # share connector for http client which keeps track of simultaneous crawls and dns cache across threads
+    connector = aiohttp.TCPConnector(limit=settings.CRAWL_CONCURRENCY, ttl_dns_cache=settings.HOST_CACHE_INTERVAL)
 
     async for target_key, target in targets.items():
         # for each target to get crawled
@@ -52,7 +56,7 @@ async def get_crawls(targets):
             else:
                 # crawl of host is not in table or is not valid anymore
                 # get crawl
-                target_host_crawl = await Crawl.get_crawl(host=host, ip=target.ip)
+                target_host_crawl = await Crawl.get_crawl(host=host, ip=target.ip, connector=connector)
                 # append crawl to host of target
                 target.hosts[host].append(target_host_crawl)
                 # write crawl in crawl table

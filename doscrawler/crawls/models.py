@@ -33,16 +33,17 @@ class Crawl(Record, coerce=True, serializer="json"):
     time: datetime
 
     @classmethod
-    async def get_crawl(cls, host, ip):
+    async def get_crawl(cls, host, ip, connector):
         """
         Get crawl from host
 
         :param host: [str] host name of target
         :param ip: [str] IP address from which the host name is resolved
+        :param connector: [aiohttp.TCPConnector] connector which keeps track of simultaneous crawls and dns cache
         :return: [doscrawler.crawls.models.Crawl] crawl of host of target
         """
 
-        record, status, time = await cls._crawl_host(host, ip)
+        record, status, time = await cls._crawl_host(host, ip, connector)
         crawl = cls(host=host, record=record, status=status, time=time)
 
         return crawl
@@ -84,12 +85,13 @@ class Crawl(Record, coerce=True, serializer="json"):
         return False
 
     @staticmethod
-    async def _crawl_host(host, ip):
+    async def _crawl_host(host, ip, connector):
         """
         Crawl host
 
         :param host: [str] host name of target
         :param ip: [str] IP address from which the host name is resolved
+        :param connector: [aiohttp.TCPConnector] connector which keeps track of simultaneous crawls and dns cache
         :return: [str] record of response or metadata from host as WARC, gzipped, base64 encoded
         :return: [int] status code of crawl, e.g. negative code indicates no response from host could be recorded
         :return: [datetime.datetime] time of request sent to crawl host
@@ -114,7 +116,7 @@ class Crawl(Record, coerce=True, serializer="json"):
         try:
             # try to get response on request
             # send request
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession(connector=connector, connector_owner=False) as session:
                 async with session.get(host_schema, timeout=aiohttp.ClientTimeout(total=settings.CRAWL_REQUEST_TIMEOUT), headers=settings.CRAWL_REQUEST_HEADER, ssl=False) as response:
                     warc_response_payload = await response.text()
                     warc_response_payload = warc_response_payload.encode("utf-8")
