@@ -51,6 +51,7 @@ def configure(app, conf, **kwargs):
     conf.consumer_auto_offset_reset = settings.CONSUMER_AUTO_OFFSET_RESET
     conf.producer_acks = settings.PRODUCER_ACKS
     conf.producer_request_timeout = settings.PRODUCER_REQUEST_TIMEOUT
+    conf.producer_max_request_size = settings.PRODUCER_MAX_REQUEST_SIZE
     conf.table_cleanup_interval = settings.TABLE_CLEANUP_INTERVAL
     conf.table_standby_replicas = settings.TABLE_STANDBY_REPLICAS
     conf.table_key_index_size = settings.TABLE_KEY_INDEX_SIZE

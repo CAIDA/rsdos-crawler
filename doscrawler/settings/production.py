@@ -10,8 +10,35 @@ This module defines the production settings of the DoS crawler.
 
 """
 
-from logging.config import dictConfig
 
+SIMPLE_SETTINGS = {
+    "OVERRIDE_BY_ENV": True,
+    "CONFIGURE_LOGGING": True,
+    "REQUIRED_SETTINGS": ("BROKER",),
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "default": {
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "default",
+        },
+    },
+    "loggers": {
+        "example": {
+            "handlers": ["console"],
+            "level": "INFO",
+        },
+    },
+}
 
 DEBUG = True
 BROKER = "kafka://localhost:9092"
@@ -20,14 +47,6 @@ CACHE = "memory://"
 PROCESSING_GUARANTEE = "exactly_once"
 ORIGIN = "doscrawler.app"
 AUTODISCOVER = ["doscrawler.containers", "doscrawler.objects", "doscrawler.targets", "doscrawler.hosts", "doscrawler.crawls", "doscrawler.dumps", "doscrawler.slacks"]
-LOGGING = dictConfig(
-    {
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {"default": {"format": "%(asctime)s %(levelname)s %(name)s %(message)s"}},
-        "handlers": {"console": {"level": "INFO", "class": "logging.StreamHandler", "formatter": "default",}},
-    } # "loggers": {"page_views": {"handlers": ["console"], "level": "INFO"}},
-)
 KEY_SERIALIZER = "raw"
 VALUE_SERIALIZER = "json"
 TOPIC_PARTITIONS = 4
@@ -44,6 +63,7 @@ CONSUMER_AUTO_OFFSET_RESET = "earliest"
 # ConsumerScheduler
 PRODUCER_ACKS = -1
 PRODUCER_REQUEST_TIMEOUT = 3600
+PRODUCER_MAX_REQUEST_SIZE = 2000000
 TABLE_CLEANUP_INTERVAL = 60
 TABLE_STANDBY_REPLICAS = 1
 TABLE_KEY_INDEX_SIZE = 8192
@@ -88,5 +108,6 @@ DUMP_CRON = "0 * * * *" # every hour
 DUMP_DIR = "data/"
 DUMP_COMPRESS_LEVEL = 7
 
+# slacks
 SLACK_TOKEN = ""
 SLACK_CHANNEL = ""
