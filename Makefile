@@ -1,8 +1,8 @@
 build:
 	docker-compose build
 
-run:
-	docker-compose up
+up:
+	docker-compose up -d
 
 stop:
 	docker-compose stop
@@ -16,6 +16,6 @@ logs:
 remove:
 	docker-compose rm --force -v
 
-run: build run
+run: build up
 
 clean: stop remove
