@@ -12,9 +12,7 @@ This module defines the models for the dumps of the DoS crawler.
 
 import os
 import json
-import base64
 import gzip
-from io import BytesIO
 from faust import Record
 from datetime import datetime
 from simple_settings import settings
@@ -96,16 +94,14 @@ class Dump(Record):
 
             if target and not target.is_alive:
                 # target still exists in table and its time to live has expired
-                # get target as dictionary
-                target_dict = target.asdict()
-
-                # prepare nested fields in dictionary
-                # uncompress crawls
-                target_dict["hosts"] = {host: sorted([{"record": gzip.GzipFile(fileobj=BytesIO(base64.b64decode(crawl.record))).read().decode("utf-8"), "status": crawl.status, "time": crawl.time} for crawl in crawls], key=lambda crawl: crawl.get("time")) for host, crawls in sorted(target.hosts.items())}
-                target_dict["target_lines"] = sorted([target_line.asdict() for target_line in target.target_lines], key=lambda target_line: target_line.get("latest_time"))
+                # get decoded target as dictionary
+                target_dict = target.get_decoded_dict()
 
                 # append uncompressed target to dump of targets
                 targets.append(target_dict)
+
+                # reduce target for smaller message sizes
+                target.reset_crawls()
 
                 # send target to change target topic for deletion
                 await change_target_topic.send(key=f"delete/{target.ip}/{target.start_time}", value=target)

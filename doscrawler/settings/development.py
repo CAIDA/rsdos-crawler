@@ -108,6 +108,7 @@ HOST_CONCURRENCY = 2
 DUMP_CRON = "*/5 * * * *" # every five minutes
 DUMP_DIR = "data/"
 DUMP_COMPRESS_LEVEL = 7
+DUMP_CLEAN_TIMER = 60
 
 SLACK_TOKEN = ""
 SLACK_CHANNEL = ""

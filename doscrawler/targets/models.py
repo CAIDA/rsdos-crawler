@@ -10,7 +10,10 @@ This module defines the models of the targets for the DoS crawler.
 
 """
 
+import base64
+import gzip
 import itertools
+from io import BytesIO
 from faust import Record
 from typing import List, Dict
 from datetime import datetime, timedelta, timezone
@@ -95,6 +98,21 @@ class Target(Record, coerce=True, serializer="json"):
                 return True
 
         return False
+
+    def get_decoded_dict(self):
+        """
+        Get dictionary with target and its decoded crawls, used for dumps
+        :return: [dict] dictionary of target
+        """
+
+        target_dict = self.asdict()
+
+        # prepare nested fields in dictionary
+        # uncompress crawls
+        target_dict["hosts"] = {host: sorted([{"record": gzip.GzipFile(fileobj=BytesIO(base64.b64decode(crawl.record))).read().decode("utf-8"), "status": crawl.status, "time": crawl.time} for crawl in crawls], key=lambda crawl: crawl.get("time")) for host, crawls in sorted(self.hosts.items())}
+        target_dict["target_lines"] = sorted([target_line.asdict() for target_line in self.target_lines], key=lambda target_line: target_line.get("latest_time"))
+
+        return target_dict
 
     def get_ttl(self, time=None):
         """
