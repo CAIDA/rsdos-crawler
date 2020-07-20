@@ -50,7 +50,7 @@ class Dump(Record):
         :return: [str] name of dump
         """
 
-        time_str = time.strftime("%Y%m%d%H%M%S")
+        time_str = time.strftime("%Y%m%d%H%M")
         name = f"data-telescope-crawler-dos-{time_str}"
 
         return name
