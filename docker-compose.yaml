@@ -1,7 +1,7 @@
 version: "3.8"
 services:
-  doscrawler:
-    container_name: doscrawler
+  doscrawler1:
+    container_name: doscrawler1
     build:
       context: .
       dockerfile: Dockerfile
@@ -21,6 +21,33 @@ services:
       - BROKER_NAME=kafka
       - BROKER_PORT=9092
       - WORKER_ID=1
+      - DUMP_DIR=/data/dumps/
+      - SLACK_TOKEN=
+      - SLACK_CHANNEL=
+  doscrawler2:
+    container_name: doscrawler2
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - doscrawler-data:/data/
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5mb"
+        max-file: "10"
+    depends_on:
+      - kafka
+      - zookeeper
+    environment:
+      - SIMPLE_SETTINGS=doscrawler.settings.production
+      - BROKER=kafka://kafka:9092
+      - BROKER_NAME=kafka
+      - BROKER_PORT=9092
+      - WORKER_ID=2
+      - DUMP_DIR=/data/dumps/
+      - SLACK_TOKEN=
+      - SLACK_CHANNEL=
   kafka:
     image: wurstmeister/kafka
     hostname: kafka
@@ -35,6 +62,7 @@ services:
       - KAFKA_LISTENERS=PLAINTEXT://kafka:9092
       - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_MESSAGE_MAX_BYTES=209715200
       - KAFKA_NUM_PARTITIONS=4
       - KAFKA_BROKER_ID=1
       - KAFKA_LOG_DIRS=/kafka/1
