@@ -100,6 +100,9 @@ class Crawl(Record, coerce=True, serializer="json"):
         # set default status
         status = -1
 
+        # set default truncated
+        truncated = False
+
         # add schema to host name
         ## check existing schema
         #if not re.match(r"(?:http|ftp|https)://", host):
@@ -120,9 +123,14 @@ class Crawl(Record, coerce=True, serializer="json"):
                 async with session.get(host_schema, timeout=aiohttp.ClientTimeout(total=settings.CRAWL_REQUEST_TIMEOUT), headers=settings.CRAWL_REQUEST_HEADER, ssl=False) as response:
                     warc_response_payload = await response.text()
                     warc_response_payload = warc_response_payload.encode("utf-8")
-                    warc_response_status = f"{response.status}"
-                    warc_response_headers = StatusAndHeaders(warc_response_status, response.headers,
-                                                             protocol="HTTP/1.1")
+
+                    if len(warc_response_payload) > settings.CRAWL_BODY_MAX_BYTES:
+                        # response must be truncated
+                        truncated = True
+                        warc_response_payload = warc_response_payload[:settings.CRAWL_BODY_MAX_BYTES]
+
+                    warc_response_status = f"{response.status} {response.reason}"
+                    warc_response_headers = StatusAndHeaders(warc_response_status, response.headers, protocol="HTTP/1.1")
                     warc_response = warc_writer.create_warc_record(uri=host_schema, record_type="response",
                                                                    payload=BytesIO(warc_response_payload),
                                                                    length=len(warc_response_payload),
@@ -158,6 +166,9 @@ class Crawl(Record, coerce=True, serializer="json"):
         # add ip address of target
         warc_request.rec_headers.add_header("WARC-IP-Address", ip)
         warc_response.rec_headers.add_header("WARC-IP-Address", ip)
+
+        # add truncated
+        warc_response.rec_headers.add_header("WARC-Truncated", str(truncated))
 
         # write request and response in warc
         warc_writer.write_record(warc_request)
