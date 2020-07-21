@@ -54,8 +54,6 @@ class StreamContainer(Service):
         :return:
         """
 
-        logging.info("Service to stream container is starting to get latest objects.")
-
         # get latest objects from container
         objects = await Container(name=container).get_objects(interval=interval)
 

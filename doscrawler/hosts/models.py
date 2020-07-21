@@ -40,6 +40,21 @@ class HostGroup(Record, coerce=True, serializer="json"):
 
         return host_group
 
+    @property
+    def is_valid(self):
+        """
+        Check if host group is still valid according to expire interval
+
+        :return: [bool] check if host group is still valid
+        """
+
+        expire_time = datetime.now(timezone.utc) - timedelta(seconds=settings.HOST_CACHE_INTERVAL)
+
+        if self.time > expire_time:
+            return True
+
+        return False
+
     @staticmethod
     def _get_names(ip):
         """
@@ -66,18 +81,3 @@ class HostGroup(Record, coerce=True, serializer="json"):
             names = [ip]
 
         return names
-
-    @property
-    def is_valid(self):
-        """
-        Check if host group is still valid according to expire interval
-
-        :return: [bool] check if host group is still valid
-        """
-
-        expire_time = datetime.now(timezone.utc) - timedelta(seconds=settings.HOST_CACHE_INTERVAL)
-
-        if self.time > expire_time:
-            return True
-
-        return False

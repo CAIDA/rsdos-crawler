@@ -42,7 +42,7 @@ LOGGING = {
 
 DEBUG = True
 BROKER = "kafka://localhost:9092"
-STORE = "rocksdb://"
+STORE = "memory://"
 CACHE = "memory://"
 PROCESSING_GUARANTEE = "exactly_once"
 ORIGIN = "doscrawler.app"
@@ -86,6 +86,7 @@ CRAWL_CONCURRENCY = 60
 CRAWL_RETRIES = 3
 CRAWL_RETRIES_BACKOFF = 20 # 20 -> 40 -> 80 seconds delay
 CRAWL_REPEAT_INTERVAL = 1200 # 20 minutes
+CRAWL_CLEAN_TIMER = 3600
 CRAWL_CACHE_INTERVAL = 10
 CRAWL_REQUEST_HEADER = {}
 CRAWL_REQUEST_TIMEOUT = 15

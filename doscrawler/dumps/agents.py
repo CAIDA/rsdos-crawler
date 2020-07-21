@@ -39,16 +39,12 @@ async def change_dumps(dumps):
                 # dump has not yet been processed
                 # log got new unprocessed object
                 logging.info(f"Agent to process dumps is working on a new unprocessed dump {dump.name}.")
-
                 # get targets and write dump
                 name, time, targets = await dump.write(dir=None)
-
                 # mark in table dump as processed
                 dump_table[dump.name] = dump
-
                 # log dump
                 logging.info(f"Agent to process dumps has dumped {targets} targets at {time} in {name}.")
-
                 # slack dump
                 await get_slack_topic.send(value=Slack(status="success", title="I saved a new dump!", descriptions=[f"Dump: {name}", f"Targets: {targets}"]))
 

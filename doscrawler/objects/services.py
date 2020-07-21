@@ -12,7 +12,6 @@ This module defines the services of the objects in the Swift containers for the 
 
 import logging
 from mode import Service
-from datetime import datetime, timedelta, timezone
 from simple_settings import settings
 from doscrawler.app import app
 from doscrawler.objects.tables import object_table
@@ -53,19 +52,12 @@ class ObjectService(Service):
 
         logging.info("Service to maintain objects is starting to clean objects.")
 
-        # get clean time
-        clean_time = datetime.now(timezone.utc) - timedelta(seconds=settings.CONTAINER_GET_OBJECTS_INTERVAL)
-
         for object_key in list(object_table.keys()):
             # for each object
             # look up object in table
             object = object_table[object_key]
 
-            if object:
-                # object still exists in table
-                if object.time < clean_time:
-                    # for each expired object
-                    # send object to change object topic for deletion
-                    await change_object_topic.send(key=f"delete/{object.container}/{object.name}", value=object)
-
-        logging.info("Service to maintain objects has send the objects which will not be considered anymore for deletion.")
+            if object and not object.is_valid:
+                # for each expired object
+                # send object to change object topic for deletion
+                await change_object_topic.send(key=f"delete/{object.container}/{object.name}", value=object)

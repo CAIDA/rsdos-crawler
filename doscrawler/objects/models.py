@@ -59,6 +59,21 @@ class Object(Record, coerce=True, serializer="json"):
 
         return random_object
 
+    @property
+    def is_valid(self):
+        """
+        Check if object must still be considered according to expire interval
+
+        :return: [bool] object is still valid
+        """
+
+        expire_time = datetime.now(timezone.utc) - timedelta(seconds=settings.CONTAINER_GET_OBJECTS_INTERVAL)
+
+        if self.time > expire_time:
+            return True
+
+        return False
+
     def is_in_interval(self, start, end):
         """
         Check if object is in time interval between start and end

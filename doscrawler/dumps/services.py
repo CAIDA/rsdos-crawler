@@ -12,7 +12,7 @@ This module defines the services for the dumps of the DoS crawler.
 
 import logging
 from mode import Service
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from simple_settings import settings
 from doscrawler.app import app
 from doscrawler.dumps.models import Dump
@@ -48,17 +48,12 @@ async def _clean_dumps(self):
 
     logging.info("Service to maintain dumps is starting to clean dumps.")
 
-    # get clean time
-    clean_time = datetime.now(timezone.utc) - timedelta(seconds=settings.RETENTION_INTERVAL)
-
     for dump_key in list(dump_table.keys()):
         # for each dump
         # look up dump in table
         dump = dump_table[dump_key]
 
-        if dump:
-            # dump still exists in table
-            if dump.time < clean_time:
-                # for each expired dump
-                # send dump to change dump topic for deletion
-                await change_dump_topic.send(key=f"delete/{dump.name}", value=dump)
+        if dump and not dump.is_valid:
+            # for each expired dump
+            # send dump to change dump topic for deletion
+            await change_dump_topic.send(key=f"delete/{dump.name}", value=dump)

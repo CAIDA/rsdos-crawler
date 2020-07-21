@@ -14,7 +14,7 @@ import os
 import json
 import gzip
 from faust import Record
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from simple_settings import settings
 from doscrawler.targets.tables import target_table
 from doscrawler.targets.topics import change_target_topic
@@ -40,6 +40,21 @@ class Dump(Record):
         dump = cls(name=cls._get_name(time=time), time=time)
 
         return dump
+
+    @property
+    def is_valid(self):
+        """
+        Check if dump must still be considered according to expire interval
+
+        :return: [bool] dump is still valid
+        """
+
+        expire_time = datetime.now(timezone.utc) - timedelta(seconds=settings.RETENTION_INTERVAL)
+
+        if self.time > expire_time:
+            return True
+
+        return False
 
     @staticmethod
     def _get_name(time):
@@ -96,13 +111,10 @@ class Dump(Record):
                 # target still exists in table and its time to live has expired
                 # get decoded target as dictionary
                 target_dict = target.get_decoded_dict()
-
                 # append uncompressed target to dump of targets
                 targets.append(target_dict)
-
                 # reduce target for smaller message sizes
                 target.reset_crawls()
-
                 # send target to change target topic for deletion
                 await change_target_topic.send(key=f"delete/{target.ip}/{target.start_time}", value=target)
 
