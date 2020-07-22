@@ -32,7 +32,7 @@ async def get_crawls(targets):
     logging.info("Agent to get crawls from targets is ready to receive targets.")
 
     # share connector for http client which keeps track of simultaneous crawls and dns cache across threads
-    connector = aiohttp.TCPConnector(limit=None, ttl_dns_cache=settings.HOST_CACHE_INTERVAL, force_close=True, enable_cleanup_closed=True)
+    connector = aiohttp.TCPConnector(limit=settings.CRAWL_CONCURRENCY, ttl_dns_cache=settings.HOST_CACHE_INTERVAL, force_close=True, enable_cleanup_closed=True)
 
     async for target_key, target in targets.items():
         # for each target to get crawled

@@ -121,13 +121,16 @@ class Crawl(Record, coerce=True, serializer="json"):
             # send request
             async with aiohttp.ClientSession(connector=connector, connector_owner=False) as session:
                 async with session.get(host_schema, timeout=aiohttp.ClientTimeout(total=settings.CRAWL_REQUEST_TIMEOUT), headers=settings.CRAWL_REQUEST_HEADER, ssl=False) as response:
-                    warc_response_payload = await response.text()
-                    warc_response_payload = warc_response_payload.encode("utf-8")
+                    warc_response_payload = b""
+                    chunk_bytes = 20480
+                    chunk_last_limit = settings.CRAWL_BODY_MAX_BYTES - chunk_bytes
+                    async for chunk in response.content.iter_chunked(chunk_bytes):
+                        warc_response_payload += chunk
 
-                    if len(warc_response_payload) > settings.CRAWL_BODY_MAX_BYTES:
-                        # response must be truncated
-                        truncated = True
-                        warc_response_payload = warc_response_payload[:settings.CRAWL_BODY_MAX_BYTES]
+                        if len(warc_response_payload) > chunk_last_limit:
+                            # response has to be truncated
+                            truncated = True
+                            break
 
                     warc_response_status = f"{response.status} {response.reason}"
                     warc_response_headers = StatusAndHeaders(warc_response_status, response.headers, protocol="HTTP/1.1")

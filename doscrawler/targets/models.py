@@ -109,7 +109,7 @@ class Target(Record, coerce=True, serializer="json"):
 
         # prepare nested fields in dictionary
         # uncompress crawls
-        target_dict["hosts"] = {host: sorted([{"record": gzip.GzipFile(fileobj=BytesIO(base64.b64decode(crawl.record))).read().decode("utf-8"), "status": crawl.status, "time": crawl.time} for crawl in crawls], key=lambda crawl: crawl.get("time")) for host, crawls in sorted(self.hosts.items())}
+        target_dict["hosts"] = {host: sorted([{"record": gzip.GzipFile(fileobj=BytesIO(base64.b64decode(crawl.record))).read().decode("utf-8", errors="ignore"), "status": crawl.status, "time": crawl.time} for crawl in crawls], key=lambda crawl: crawl.get("time")) for host, crawls in sorted(self.hosts.items())}
         target_dict["target_lines"] = sorted([target_line.asdict() for target_line in self.target_lines], key=lambda target_line: target_line.get("latest_time"))
 
         return target_dict
