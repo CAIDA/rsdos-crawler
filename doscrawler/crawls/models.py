@@ -99,19 +99,15 @@ class Crawl(Record, coerce=True, serializer="json"):
 
         # set default status
         status = -1
-
         # set default truncated
         truncated = False
-
         # add schema to host name
         ## check existing schema
         #if not re.match(r"(?:http|ftp|https)://", host):
         #   host_schema = f"http://{host}"
         host_schema = f"http://{host}"
-
         # define warc writer
         warc_writer = BufferWARCWriter(warc_version="1.1", gzip=True)
-
         # prepare write request
         warc_request_headers = StatusAndHeaders("GET / HTTP/1.1", settings.CRAWL_REQUEST_HEADER, is_http_request=True)
         warc_request = warc_writer.create_warc_record(host_schema, "request", http_headers=warc_request_headers, warc_content_type="application/http; msgtype=request")
@@ -121,10 +117,13 @@ class Crawl(Record, coerce=True, serializer="json"):
             # send request
             async with aiohttp.ClientSession(connector=connector, connector_owner=False) as session:
                 async with session.get(host_schema, timeout=aiohttp.ClientTimeout(total=settings.CRAWL_REQUEST_TIMEOUT), headers=settings.CRAWL_REQUEST_HEADER, ssl=False) as response:
+                    # prepare iterate over response
                     warc_response_payload = b""
                     chunk_bytes = 20480
                     chunk_last_limit = settings.CRAWL_BODY_MAX_BYTES - chunk_bytes
+
                     async for chunk in response.content.iter_chunked(chunk_bytes):
+                        # for chunk in iterated response
                         warc_response_payload += chunk
 
                         if len(warc_response_payload) > chunk_last_limit:
@@ -142,6 +141,7 @@ class Crawl(Record, coerce=True, serializer="json"):
 
             # change status
             status = response.status
+
         except Exception as e:
             # raised exception while request
             # prepare write metadata as response
@@ -161,22 +161,18 @@ class Crawl(Record, coerce=True, serializer="json"):
         # get request time
         warc_request_date = warc_request.rec_headers.get_header("WARC-Date")
         time = iso_date_to_datetime(warc_request_date).replace(tzinfo=timezone.utc)
-
         # associate request and response
         warc_response_id = warc_response.rec_headers.get_header("WARC-Record-ID")
         warc_request.rec_headers.add_header("WARC-Concurrent-To", warc_response_id)
-
         # add ip address of target
         warc_request.rec_headers.add_header("WARC-IP-Address", ip)
         warc_response.rec_headers.add_header("WARC-IP-Address", ip)
-
         # add truncated
         warc_response.rec_headers.add_header("WARC-Truncated", str(truncated))
-
         # write request and response in warc
         warc_writer.write_record(warc_request)
         warc_writer.write_record(warc_response)
-
+        # prepare record for message
         record = warc_writer.get_contents()
         record = base64.encodebytes(record).decode("ascii")
 

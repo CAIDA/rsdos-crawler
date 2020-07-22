@@ -35,34 +35,22 @@ async def get_hosts(targets):
         # look up host group for target in host table
         target_host_group_current = host_table[target.ip]
 
-        if target_host_group_current:
-            # hosts of target have already been resolved
-            if not target_host_group_current.is_valid:
-                # host group is not valid anymore
-                # create and resolve host group
-                target_host_group = await HostGroup.create_hostgroup_from_ip(ip=target.ip)
-                # send host group to host topic
-                await change_host_topic.send(key=f"add/{target.ip}", value=target_host_group)
-                # add hosts to target with empty crawls
-                target.hosts = {host: [] for host in target_host_group.names}
-
-            else:
-                # host group is still valid
-                # add hosts to target with empty crawls
-                target.hosts = {host: [] for host in target_host_group_current.names}
+        if target_host_group_current and target_host_group_current.is_valid:
+            # host group is still valid
+            # add hosts to target with empty crawls
+            target.hosts = {host: [] for host in target_host_group_current.names}
 
         else:
-            # hosts of target have not yet been resolved
+            # no current host group or not valid anymore
             # create and resolve host group
             target_host_group = await HostGroup.create_hostgroup_from_ip(ip=target.ip)
-            # send to host topic to update hosts
+            # send host group to host topic
             await change_host_topic.send(key=f"add/{target.ip}", value=target_host_group)
             # add hosts to target with empty crawls
             target.hosts = {host: [] for host in target_host_group.names}
 
         # send to change target topic to update target with intermediate result of host names
         await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
-
         # send to get crawl topic to crawl hosts
         await get_crawl_topic.send(key=f"{target.ip}/{target.start_time}", value=target)
 

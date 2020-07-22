@@ -50,10 +50,8 @@ async def get_targets(target_lines):
 
         # send target candidate to change target candidate topic for update
         await change_target_candidate_topic.send(key=f"add/{target.ip}", value=target)
-
         # send to change target topic to update target with intermediate result of target lines
         await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
-
         # send target to get host topic to get host names
         await get_host_topic.send(key=f"{target.ip}/{target.start_time}", value=target)
 
@@ -105,48 +103,46 @@ async def change_targets(targets):
 
     async for target_key, target in targets.items():
         if target_key.startswith("add"):
-            # target should be added
-            if target.get_ttl() < 5:
-                # ignore targets after ttl and close to after ttl
-                continue
             # target has to be added
-            # look up target in target table
-            target_current = target_table[f"{target.ip}/{target.start_time}"]
+            if target.get_ttl() > 5:
+                # target is still alive for at least 5 seconds
+                # look up target in target table
+                target_current = target_table[f"{target.ip}/{target.start_time}"]
 
-            if target_current:
-                # target has already been stored in target table
-                # get all target lines
-                targetlines_current_keys = [f"{target_line.start_time}/{target_line.latest_time}" for target_line in target_current.target_lines]
-                targetlines_new = [target_line for target_line in target.target_lines if f"{target_line.start_time}/{target_line.latest_time}" not in targetlines_current_keys]
-                targetlines_all = target_current.target_lines + targetlines_new
+                if target_current:
+                    # target has already been stored in target table
+                    # get all target lines
+                    targetlines_current_keys = [f"{target_line.start_time}/{target_line.latest_time}" for target_line in target_current.target_lines]
+                    targetlines_new = [target_line for target_line in target.target_lines if f"{target_line.start_time}/{target_line.latest_time}" not in targetlines_current_keys]
+                    targetlines_all = target_current.target_lines + targetlines_new
+                    # get latest time
+                    latest_time = max([target_line.latest_time for target_line in targetlines_all])
+                    # get all hosts
+                    hosts_current = target_current.hosts.keys()
+                    hosts_new = [host for host in target.hosts.keys() if host not in hosts_current]
+                    hosts_update = [host for host in target.hosts.keys() if host in hosts_current]
+                    # get new hosts and their crawls
+                    hosts_all = {host: list(set(target.hosts[host])) for host in hosts_new}
 
-                # get latest time
-                latest_time = max([target_line.latest_time for target_line in targetlines_all])
+                    for host in hosts_update:
+                        # get existing hosts and their crawls
+                        crawls_current_time = [crawl.time for crawl in target_current.hosts[host]]
+                        crawls_new = [crawl for crawl in target.hosts[host] if crawl.time not in crawls_current_time]
+                        hosts_all[host] = list(set(target_current.hosts[host] + crawls_new))
 
-                # get all hosts
-                hosts_current = target_current.hosts.keys()
-                hosts_new = [host for host in target.hosts.keys() if host not in hosts_current]
-                hosts_update = [host for host in target.hosts.keys() if host in hosts_current]
-                hosts_all = {host: list(set(target.hosts[host])) for host in hosts_new}
+                    # update target in target table
+                    target_updated = Target(ip=target.ip, start_time=target.start_time, latest_time=latest_time,
+                                            target_lines=targetlines_all, hosts=hosts_all)
+                    target_table[f"{target.ip}/{target.start_time}"] = target_updated
 
-                for host in hosts_update:
-                    crawls_current_time = [crawl.time for crawl in target_current.hosts[host]]
-                    crawls_new = [crawl for crawl in target.hosts[host] if crawl.time not in crawls_current_time]
-                    hosts_all[host] = list(set(target_current.hosts[host] + crawls_new))
-
-                # update target in target table
-                target_updated = Target(ip=target.ip, start_time=target.start_time, latest_time=latest_time,
-                                        target_lines=targetlines_all, hosts=hosts_all)
-                target_table[f"{target.ip}/{target.start_time}"] = target_updated
-
-            else:
-                # target has not yet been stored in target table
-                for host in target.hosts.keys():
-                    # for each host
-                    # deduplicate crawls
-                    target.hosts[host] = list(set(target.hosts[host]))
-                # add target to target table
-                target_table[f"{target.ip}/{target.start_time}"] = target
+                else:
+                    # target has not yet been stored in target table
+                    for host in target.hosts.keys():
+                        # for each host
+                        # deduplicate crawls
+                        target.hosts[host] = list(set(target.hosts[host]))
+                    # add target to target table
+                    target_table[f"{target.ip}/{target.start_time}"] = target
 
         elif target_key.startswith("delete"):
             # target has to be deleted

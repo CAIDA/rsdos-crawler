@@ -156,6 +156,7 @@ class Object(Record, coerce=True, serializer="json"):
 
         for line in lines:
             line_match = corsaro_start_time_pattern.match(line)
+
             if line_match:
                 # parse time stamp
                 start_corsaro_interval = int(line_match.group(1))
@@ -186,6 +187,7 @@ class Object(Record, coerce=True, serializer="json"):
 
         for line in lines:
             line_match = target_line_pattern.match(line)
+
             if line_match:
                 # parse target line as dictionary
                 target_line = {}

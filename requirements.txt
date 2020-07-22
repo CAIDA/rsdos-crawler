@@ -1,5 +1,5 @@
 Cython==0.29.19
-faust[rocksdb]==1.10.4
+faust==1.10.4
 warcio==1.7.3
 cchardet==2.1.6
 simple-settings==0.19.1

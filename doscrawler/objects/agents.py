@@ -40,11 +40,9 @@ async def change_objects(objects):
                 # object has not yet been processed
                 # log got new unprocessed object
                 logging.info(f"Agent to process objects is working on a new unprocessed object {object.container}/{object.name}.")
-
                 # get target lines from object
                 target_lines = await object.get_target_lines()
 
-                # send target lines to topic
                 for target_line in target_lines:
                     # for each target line in object
                     # send target line to get target topic
@@ -52,13 +50,11 @@ async def change_objects(objects):
 
                 # mark in table object as processed
                 object_table[f"{object.container}/{object.name}"] = object
-
                 # log finished new unprocessed object
                 logging.info(
                     f"Agent to process objects has sent from object {object.container}/{object.name} in total " \
                     f"{len(target_lines)} target lines to the target line topic."
                 )
-
                 # slack finished new unprocessed object
                 await get_slack_topic.send(value=Slack(status="success",
                                                        title="I processed a new object!",

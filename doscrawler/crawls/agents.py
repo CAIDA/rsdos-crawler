@@ -64,7 +64,6 @@ async def get_crawls(targets):
 
         # send to change target topic to update target
         await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
-
         # send to wait crawl topic to retry and repeat crawls
         await change_wait_crawl_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
 
