@@ -3,9 +3,9 @@
 
 """
 
-Targets
+Attacks
 -------
 
-This module defines the targets of the DoS crawler.
+This module defines the attacks in the DoS crawler.
 
 """

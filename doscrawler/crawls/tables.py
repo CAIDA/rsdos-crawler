@@ -12,13 +12,13 @@ This module defines the tables of the crawls for the DoS crawler.
 
 from simple_settings import settings
 from doscrawler.app import app
-from doscrawler.targets.models import Target
+from doscrawler.attacks.models import Attack
 from doscrawler.crawls.models import Crawl
 from doscrawler.crawls.topics import log_crawl_topic, log_wait_crawl_topic
 
 
 crawl_table = app.Table(
-    name="doscrawler-crawl",
+    name="doscrawler.crawl",
     partitions=settings.TOPIC_PARTITIONS,
     key_type=str,
     value_type=Crawl,
@@ -27,10 +27,10 @@ crawl_table = app.Table(
 )
 
 wait_crawl_table = app.Table(
-    name="doscrawler-crawl-wait",
+    name="doscrawler.crawl.wait",
     partitions=settings.TOPIC_PARTITIONS,
     key_type=str,
-    value_type=Target,
+    value_type=Attack,
     default=bool,
     changelog_topic=log_wait_crawl_topic
 )

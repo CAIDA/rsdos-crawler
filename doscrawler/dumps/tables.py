@@ -16,7 +16,7 @@ from doscrawler.dumps.topics import log_dump_topic
 
 
 dump_table = app.Table(
-    name="doscrawler-dump",
+    name="doscrawler.dump",
     key_type=str,
     value_type=Dump,
     default=bool,

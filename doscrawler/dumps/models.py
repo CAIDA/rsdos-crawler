@@ -16,8 +16,9 @@ import gzip
 from faust import Record
 from datetime import datetime, timezone, timedelta
 from simple_settings import settings
-from doscrawler.targets.tables import target_table
-from doscrawler.targets.topics import change_target_topic
+from doscrawler.attacks.models import Attack
+from doscrawler.attacks.tables import attack_table
+from doscrawler.attacks.topics import change_attack_topic
 
 
 class Dump(Record):
@@ -92,33 +93,31 @@ class Dump(Record):
 
         return dir
 
-    async def _get_targets(self):
+    async def _get_attacks(self):
         """
-        Get targets for dump
+        Get attacks for dump
 
-        :return: [list] list of targets to be saved in dump
+        :return: [list] list of attacks to be saved in dump
         """
 
-        targets = []
+        attacks = []
 
-        # get all targets whose time to live has expired
-        for target_key in list(target_table.keys()):
-            # for each target
-            # look up target in table
-            target = target_table[target_key]
+        for attack_key in list(attack_table.keys()):
+            # look up attack in attack table
+            attack = attack_table[attack_key]
 
-            if target and not target.is_alive:
-                # target still exists in table and its time to live has expired
-                # get decoded target as dictionary
-                target_dict = target.get_decoded_dict()
-                # append uncompressed target to dump of targets
-                targets.append(target_dict)
-                # reduce target for smaller message sizes
-                target.reset_crawls()
-                # send target to change target topic for deletion
-                await change_target_topic.send(key=f"delete/{target.ip}/{target.start_time}", value=target)
+            if attack and attack.get_ttl(time=self.time) <= 0:
+                # attack still exists in table and its time to live has expired
+                # get decoded attack as dictionary
+                attack_dict = attack.get_decoded_dict()
+                # append dictionary to dump of attacks
+                attacks.append(attack_dict)
+                # get attack to send to change attack topic for deletion
+                attack = Attack(ip=attack.ip, start_time=attack.start_time, latest_time=attack.latest_time)
+                # send attack to change attack topic for deletion
+                await change_attack_topic.send(key=f"delete/{attack.ip}/{attack.start_time}", value=attack)
 
-        return targets
+        return attacks
 
     async def write(self, dir=None):
         """
@@ -127,7 +126,7 @@ class Dump(Record):
         :param dir: [str, os.path] file directory and name where to write dump
         :return: [str] name of written dump
         :return: [str] time of written dump
-        :return: [int] number of targets in written dump
+        :return: [int] number of attacks in written dump
         """
 
         if not dir:
@@ -137,11 +136,11 @@ class Dump(Record):
         dump = {
             "name": self.name,
             "time": self.time,
-            "targets": await self._get_targets()
+            "attacks": await self._get_attacks()
         }
 
         # write dump as gzip
         with gzip.GzipFile(filename=dir, mode="w", compresslevel=settings.DUMP_COMPRESS_LEVEL) as file:
             file.write(bytes(json.dumps(dump, default=self.json_serializer), encoding="utf-8"))
 
-        return dump["name"], dump["time"], len(dump["targets"])
+        return dump["name"], dump["time"], len(dump["attacks"])

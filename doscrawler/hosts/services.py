@@ -53,8 +53,7 @@ class HostService(Service):
         logging.info("Service to maintain hosts is starting to clean hosts.")
 
         for host_key in list(host_table.keys()):
-            # for each host in table
-            # look up host in table
+            # look up host in host table
             host = host_table[host_key]
 
             if host and not host.is_valid:

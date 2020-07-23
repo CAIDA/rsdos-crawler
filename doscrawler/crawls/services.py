@@ -46,22 +46,22 @@ class CrawlService(Service):
     @Service.timer(settings.CRAWL_GET_WAIT_TIMER)
     async def _get_wait_crawls(self):
         """
-        Get crawls from targets which are ready to be resend
+        Get crawls for attacks which are ready to be get crawled
 
         :return:
         """
 
-        for target_key in list(wait_crawl_table.keys()):
-            # for each target waiting for crawl
-            # look up target in table
-            target = wait_crawl_table[target_key]
+        for attack_key in list(wait_crawl_table.keys()):
+            # for each attack waiting for crawl
+            # look up attack in wait crawl table
+            attack = wait_crawl_table[attack_key]
 
-            if target and target.is_ready_crawl:
-                # target has finished waiting
-                # send target to get crawl topic to crawl hosts
-                await get_crawl_topic.send(key=target_key, value=target)
-                # send target to change object topic for deletion
-                await change_wait_crawl_topic.send(key=f"delete/{target_key}", value=target)
+            if attack and attack.is_ready_crawl:
+                # attack has finished waiting
+                # send attack to get crawl topic to crawl hosts
+                await get_crawl_topic.send(key=attack_key, value=attack)
+                # send attack to change wait crawl topic for deletion
+                await change_wait_crawl_topic.send(key=f"delete/{attack_key}", value=attack)
 
     @Service.timer(settings.CRAWL_CLEAN_TIMER)
     async def _clean_crawls(self):
@@ -75,7 +75,7 @@ class CrawlService(Service):
 
         for crawl_key in list(crawl_table.keys()):
             # for each crawl
-            # look up crawl in table
+            # look up crawl in crawl table
             crawl = crawl_table[crawl_key]
 
             if crawl and not crawl.is_valid:

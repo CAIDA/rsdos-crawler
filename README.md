@@ -3,7 +3,7 @@
 > Crawler for Targets of RSDoS Attacks at the UCSD Network Telescope
 
 Its purpose is to crawl targets of Randomly and Uniformly Spoofed Denial-of-Service attacks (RSDoS attacks) observed at
-the UCSD Network Telescope. The crawler streams the observed attacks there, organizes them into distinct targets by 
+the UCSD Network Telescope. The crawler streams the observed attacks there, organizes them into distinct attacks by 
 the IP addresses and start times. Then it tries to crawl these targets, or rather their hosts, and records the responses
 send by them.
 
@@ -23,11 +23,12 @@ send by them.
 
 - **Stream attacks**: The RSDoS attacks are streamed from the UCSD Telescope DDoS Metadata. This data is periodically 
 written in objects in a Swift container. In these objects are recorded the observed attack vectors in the respective 
-time period. The RSDoS Crawler relies on these vectors to identify targets of attacks.
-- **Track targets**: For one and the same attack, on a specific IP address at a specific start time, there are usually 
+time period. The RSDoS Crawler relies on these vectors to identify targets of attacks. **In development! This should be 
+streamed from a Kafka topic!**
+- **Track attacks**: For one and the same attack, on a specific IP address at a specific start time, there are usually 
 recorded many attack vectors over time. To track an attack over its entire duration, these vectors are considered 
 dependently. In this way, the target of an attack may be crawled over an extended period of time. And the results of the 
-RSDoS Crawler are neatly collected for each distinct target.
+RSDoS Crawler are neatly collected for each attack.
 - **Resolve hosts**: The IP addresses of the attacked targets are resolved to their host names with a naive reverse DNS
 resolution. The already resolved host names are cached. :warning: **In development! This should be integrated with a 
 dedicated reserve DNS resolution!**

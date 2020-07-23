@@ -28,11 +28,11 @@ async def _get_dumps(self):
     :return:
     """
 
-    logging.info("Service to make dumps is starting to make dump.")
+    logging.info("Service to make dumps is initializing a dump.")
 
     # create dump
-    dump_time = datetime.now(tz=timezone.utc)
-    dump = Dump.create_dump_with_time(time=dump_time)
+    time_dump = datetime.now(tz=timezone.utc)
+    dump = Dump.create_dump_with_time(time=time_dump)
 
     # send dump to change dump topic
     await change_dump_topic.send(key=f"add/{dump.name}", value=dump)

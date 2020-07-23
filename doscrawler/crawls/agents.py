@@ -14,120 +14,123 @@ import logging
 import aiohttp
 from simple_settings import settings
 from doscrawler.app import app
-from doscrawler.targets.topics import change_target_topic
+from doscrawler.crawls.models import Crawl
+from doscrawler.attacks.topics import change_attack_topic
 from doscrawler.crawls.topics import get_crawl_topic, change_crawl_topic, change_wait_crawl_topic
 from doscrawler.crawls.tables import crawl_table, wait_crawl_table
-from doscrawler.crawls.models import Crawl
 
 
 @app.agent(get_crawl_topic, concurrency=settings.CRAWL_CONCURRENCY)
-async def get_crawls(targets):
+async def get_crawls(attacks):
     """
-    Process targets in order to crawl them
+    Process attacks in order to crawl them
 
-    :param targets: [faust.types.streams.StreamT] stream of targets from get crawl topic
+    :param attacks: [faust.types.streams.StreamT] stream of attacks from get crawl topic
     :return:
     """
 
-    logging.info("Agent to get crawls from targets is ready to receive targets.")
+    logging.info("Agent to get crawls from attacks is ready to receive attacks.")
 
     # share connector for http client which keeps track of simultaneous crawls and dns cache across threads
     connector = aiohttp.TCPConnector(limit=settings.CRAWL_CONCURRENCY, ttl_dns_cache=settings.HOST_CACHE_INTERVAL, force_close=True, enable_cleanup_closed=True)
 
-    async for target_key, target in targets.items():
-        # for each target to get crawled
-        # get host names for next crawl
-        next_crawl_hosts, next_crawl_type = target.get_next_crawl_hosts()
+    async for attack_key, attack in attacks.items():
+        # get next crawl hosts and type
+        # use get_next_crawl_hosts if multiple hosts are sent in an attack
+        # here only attacks with single hosts are forwarded from get hosts agent
+        _, next_crawl_type = attack.get_next_crawl()
 
         if next_crawl_type == "repeat":
             # reset crawls on repeat
-            target.reset_crawls()
+            attack.reset_crawls()
 
-        for host in next_crawl_hosts:
-            # for each host name of next crawl
+        for host in attack.hosts:
+            # for each host name of attack
             # look up host in crawl table
-            target_host_crawl = crawl_table[host]
+            attack_host_crawl = crawl_table[host]
 
-            if target_host_crawl and target_host_crawl.is_valid:
-                # crawl of host is in table and still valid
-                # append crawl to host of target
-                target.hosts[host].append(target_host_crawl)
+            if attack_host_crawl and attack_host_crawl.is_valid:
+                # crawl of host is in crawl table and still valid
+                if f"{attack_host_crawl.host}/{attack_host_crawl.time}" not in [f"{crawl.host}/{crawl.time}" for crawl in attack.crawls]:
+                    # crawl is not in attack yet
+                    # append crawl to attack
+                    attack.crawls.append(attack_host_crawl)
 
             else:
                 # crawl of host is not in table or is not valid anymore
                 # get crawl
-                target_host_crawl = await Crawl.get_crawl(host=host, ip=target.ip, connector=connector)
-                # append crawl to host of target
-                target.hosts[host].append(target_host_crawl)
-                # write crawl in crawl table
-                await change_crawl_topic.send(key=f"add/{host}", value=target_host_crawl)
+                attack_host_crawl = await Crawl.get_crawl(host=host, ip=attack.ip, connector=connector)
+                # append crawl to attack
+                attack.crawls.append(attack_host_crawl)
+                # send crawl to change crawl topic
+                await change_crawl_topic.send(key=f"add/{host}", value=attack_host_crawl)
 
-        # send to change target topic to update target
-        await change_target_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
+        # send to change attack topic to change attack
+        await change_attack_topic.send(key=f"add/{attack.ip}/{attack.start_time}", value=attack)
         # send to wait crawl topic to retry and repeat crawls
-        await change_wait_crawl_topic.send(key=f"add/{target.ip}/{target.start_time}", value=target)
+        await change_wait_crawl_topic.send(key=f"add/{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}", value=attack)
 
 
 @app.agent(change_wait_crawl_topic, concurrency=1)
-async def change_wait_crawls(targets):
+async def change_wait_crawls(attacks):
     """
     Change wait crawl table in order to wait for retries and repeats
 
-    :param targets: [faust.types.streams.StreamT] stream of targets from change wait crawl topic
+    :param attacks: [faust.types.streams.StreamT] stream of attacks from change wait crawl topic
     :return:
     """
 
-    logging.info("Agent to change waiting crawls is ready to receive targets.")
+    logging.info("Agent to change waiting crawls is ready to receive attacks.")
 
-    async for target_key, target in targets.items():
-        if target_key.startswith("add"):
-            # target should be added
+    async for attack_key, attack in attacks.items():
+        if attack_key.startswith("add"):
+            # attack should be added
             # get next crawl
-            target_next_time, target_next_type = target.get_next_crawl()
+            attack_next_time, attack_next_type = attack.get_next_crawl()
 
-            if target_next_time:
-                # target indeed needs to be retried or recrawled
-                # get currently waiting target
-                target_current = wait_crawl_table[f"{target.ip}/{target.start_time}"]
+            if attack_next_time:
+                # attack indeed needs to be retried or recrawled
+                # get currently waiting attack
+                attack_current = wait_crawl_table[f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}"]
 
-                if target_current:
-                    # target is already waiting
-                    # get next crawl of already waiting target
-                    target_current_time, target_current_type = target_current.get_next_crawl()
+                if attack_current:
+                    # attack is already waiting
+                    # get next crawl of already waiting attack
+                    attack_current_time, attack_current_type = attack_current.get_next_crawl()
 
-                    if target_next_type == target_current_type:
-                        # both targets have the same type
-                        if target_current_time > target_next_time:
+                    if attack_next_type == attack_current_type:
+                        # both attacks have the same type
+                        if attack_current_time > attack_next_time:
                             # next crawl is earlier than current crawl
-                            # replace target in table
-                            wait_crawl_table[f"{target.ip}/{target.start_time}"] = target
+                            # replace attack in table
+                            wait_crawl_table[f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}"] = attack
 
                     else:
-                        # targets have different type
-                        if target_next_type == "retry-first":
-                            # target resets retry counter
-                            # replace target in table
-                            wait_crawl_table[f"{target.ip}/{target.start_time}"] = target
+                        # attacks have different type
+                        if attack_next_type == "retry-first":
+                            # attack resets retry counter
+                            # replace attack in table
+                            wait_crawl_table[f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}"] = attack
 
                 else:
-                    # target is not yet waiting
-                    # add target in table
-                    wait_crawl_table[f"{target.ip}/{target.start_time}"] = target
+                    # attack is not yet waiting
+                    # add attack to wait crawl table
+                    wait_crawl_table[f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}"] = attack
 
-        elif target_key.startswith("delete"):
-            # target has to be deleted
-            # get target from table and compare
-            target_current = wait_crawl_table[f"{target.ip}/{target.start_time}"]
+        elif attack_key.startswith("delete"):
+            # attack has to be deleted
+            # get current attack from wait crawl table
+            attack_current = wait_crawl_table[f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}"]
 
-            if target_current:
-                # get currently waiting target
-                target_current_time, _ = target_current.get_next_crawl()
-                # get next target
-                target_next_time, _ = target.get_next_crawl()
+            if attack_current:
+                # get next crawl for currently waiting attack
+                attack_current_time, _ = attack_current.get_next_crawl()
+                # get next crawl for sent attack
+                attack_next_time, _ = attack.get_next_crawl()
 
-                if target_current_time == target_next_time:
+                if attack_current_time == attack_next_time:
                     # delete host from host table when has not changed
-                    wait_crawl_table.pop(f"{target.ip}/{target.start_time}")
+                    wait_crawl_table.pop(f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}")
 
 
 @app.agent(change_crawl_topic)
@@ -144,8 +147,12 @@ async def change_crawls(crawls):
     async for crawl_key, crawl in crawls.items():
         if crawl_key.startswith("add"):
             # crawl has to be added
-            # update crawl in crawl table
-            crawl_table[crawl.host] = crawl
+            # get current crawl from crawl table
+            crawl_current = crawl_table[crawl.host]
+
+            if not (crawl_current and crawl_current.time > crawl.time):
+                # update host group in host table
+                crawl_table[crawl.host] = crawl
 
         elif crawl_key.startswith("delete"):
             # crawl has to be deleted

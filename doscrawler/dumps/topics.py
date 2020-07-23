@@ -16,7 +16,7 @@ from doscrawler.dumps.models import Dump
 
 
 change_dump_topic = app.topic(
-    "doscrawler-dump-change",
+    "doscrawler.dump.change",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.RETENTION_INTERVAL,
     key_type=str,
@@ -24,7 +24,7 @@ change_dump_topic = app.topic(
 )
 
 log_dump_topic = app.topic(
-    "doscrawler-dump-log",
+    "doscrawler.dump.log",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.RETENTION_INTERVAL,
     value_type=Dump

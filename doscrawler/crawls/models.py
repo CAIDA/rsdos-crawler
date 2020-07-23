@@ -28,22 +28,22 @@ class Crawl(Record, coerce=True, serializer="json"):
     """
 
     host: str
-    record: str
     status: int
     time: datetime
+    record: str
 
     @classmethod
     async def get_crawl(cls, host, ip, connector):
         """
         Get crawl from host
 
-        :param host: [str] host name of target
+        :param host: [str] host name of attack
         :param ip: [str] IP address from which the host name is resolved
         :param connector: [aiohttp.TCPConnector] connector which keeps track of simultaneous crawls and dns cache
-        :return: [doscrawler.crawls.models.Crawl] crawl of host of target
+        :return: [doscrawler.crawls.models.Crawl] crawl of host of attack
         """
 
-        record, status, time = await cls._crawl_host(host, ip, connector)
+        record, status, time = await cls._crawl_host(host=host, ip=ip, connector=connector)
         crawl = cls(host=host, record=record, status=status, time=time)
 
         return crawl
@@ -72,14 +72,14 @@ class Crawl(Record, coerce=True, serializer="json"):
         if self.is_success:
             # crawl has been successful
             # get expire time by expire interval
-            expire_time = datetime.now(timezone.utc) - timedelta(seconds=settings.CRAWL_CACHE_INTERVAL)
+            time_expire = datetime.now(timezone.utc) - timedelta(seconds=settings.CRAWL_CACHE_INTERVAL)
 
         else:
             # crawl has been unsuccessful
             # get expire time by minimum retry time
-            expire_time = datetime.now(timezone.utc) - timedelta(seconds=settings.CRAWL_RETRIES_BACKOFF)
+            time_expire = datetime.now(timezone.utc) - timedelta(seconds=settings.CRAWL_RETRIES_BACKOFF)
 
-        if self.time > expire_time:
+        if self.time > time_expire:
             return True
 
         return False
@@ -89,7 +89,7 @@ class Crawl(Record, coerce=True, serializer="json"):
         """
         Crawl host
 
-        :param host: [str] host name of target
+        :param host: [str] host name of attack
         :param ip: [str] IP address from which the host name is resolved
         :param connector: [aiohttp.TCPConnector] connector which keeps track of simultaneous crawls and dns cache
         :return: [str] record of response or metadata from host as WARC, gzipped, base64 encoded

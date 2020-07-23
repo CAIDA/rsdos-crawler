@@ -21,7 +21,7 @@ from doscrawler.slacks.topics import get_slack_topic
 @app.agent(change_dump_topic, concurrency=1)
 async def change_dumps(dumps):
     """
-    Change dumps and dump targets into files
+    Change dumps and dump attacks into files
 
     :param objects: [faust.types.streams.StreamT] stream of dumps from change dump topic
     :return:
@@ -39,14 +39,14 @@ async def change_dumps(dumps):
                 # dump has not yet been processed
                 # log got new unprocessed object
                 logging.info(f"Agent to process dumps is working on a new unprocessed dump {dump.name}.")
-                # get targets and write dump
-                name, time, targets = await dump.write(dir=None)
+                # get attacks and write dump
+                name, time, attacks = await dump.write(dir=None)
                 # mark in table dump as processed
                 dump_table[dump.name] = dump
                 # log dump
-                logging.info(f"Agent to process dumps has dumped {targets} targets at {time} in {name}.")
+                logging.info(f"Agent to process dumps has dumped {attacks} attacks at {time} in {name}.")
                 # slack dump
-                await get_slack_topic.send(value=Slack(status="success", title="I saved a new dump!", descriptions=[f"Dump: {name}", f"Targets: {targets}"]))
+                await get_slack_topic.send(value=Slack(status="success", title="I saved a new dump!", descriptions=[f"Dump: {name}", f"Attacks: {attacks}"]))
 
         elif dump_key.startswith("delete"):
             # dump has to be deleted

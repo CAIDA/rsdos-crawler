@@ -12,20 +12,20 @@ This module defines the topics of the hosts for the DoS crawler.
 
 from simple_settings import settings
 from doscrawler.app import app
-from doscrawler.targets.models import Target
+from doscrawler.attacks.models import Attack
 from doscrawler.hosts.models import HostGroup
 
 
 get_host_topic = app.topic(
-    "doscrawler-host-get",
+    "doscrawler.host.get",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.HOST_CACHE_INTERVAL,
     key_type=str,
-    value_type=Target
+    value_type=Attack
 )
 
 change_host_topic = app.topic(
-    "doscrawler-host-change",
+    "doscrawler.host.change",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.HOST_CACHE_INTERVAL,
     key_type=str,
@@ -33,7 +33,7 @@ change_host_topic = app.topic(
 )
 
 log_host_topic = app.topic(
-    "doscrawler-host-log",
+    "doscrawler.host.log",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.HOST_CACHE_INTERVAL,
     value_type=HostGroup
