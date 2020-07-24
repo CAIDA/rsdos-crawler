@@ -35,9 +35,9 @@ async def get_crawls(attacks):
     connector = aiohttp.TCPConnector(limit=settings.CRAWL_CONCURRENCY, ttl_dns_cache=settings.HOST_CACHE_INTERVAL, force_close=True, enable_cleanup_closed=True)
 
     async for attack_key, attack in attacks.items():
-        # get next crawl hosts and type
+        # get next crawl
         # use get_next_crawl_hosts if multiple hosts are sent in an attack
-        # here only attacks with single hosts are forwarded from get hosts agent
+        # for now only attacks with single hosts are forwarded from get hosts agent
         _, next_crawl_type = attack.get_next_crawl()
 
         if next_crawl_type == "repeat":
@@ -46,6 +46,7 @@ async def get_crawls(attacks):
 
         for host in attack.hosts:
             # for each host name of attack
+            # for now only attacks with single hosts are forwarded from get hosts agent
             # look up host in crawl table
             attack_host_crawl = crawl_table[host]
 
@@ -95,22 +96,10 @@ async def change_wait_crawls(attacks):
 
                 if attack_current:
                     # attack is already waiting
-                    # get next crawl of already waiting attack
-                    attack_current_time, attack_current_type = attack_current.get_next_crawl()
-
-                    if attack_next_type == attack_current_type:
-                        # both attacks have the same type
-                        if attack_current_time > attack_next_time:
-                            # next crawl is earlier than current crawl
-                            # replace attack in table
-                            wait_crawl_table[f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}"] = attack
-
-                    else:
-                        # attacks have different type
-                        if attack_next_type == "retry-first":
-                            # attack resets retry counter
-                            # replace attack in table
-                            wait_crawl_table[f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}"] = attack
+                    if attack_current.latest_time < attack.latest_time:
+                        # new attack is newer than current attack
+                        # replace attack in table
+                        wait_crawl_table[f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}"] = attack
 
                 else:
                     # attack is not yet waiting
@@ -122,15 +111,12 @@ async def change_wait_crawls(attacks):
             # get current attack from wait crawl table
             attack_current = wait_crawl_table[f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}"]
 
-            if attack_current:
-                # get next crawl for currently waiting attack
-                attack_current_time, _ = attack_current.get_next_crawl()
-                # get next crawl for sent attack
-                attack_next_time, _ = attack.get_next_crawl()
-
-                if attack_current_time == attack_next_time:
-                    # delete host from host table when has not changed
-                    wait_crawl_table.pop(f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}")
+            if attack_current and attack_current.is_need_crawl:
+                # attack waiting for crawl is in need of crawl
+                # delete wait crawl from wait crawl table when has not changed
+                wait_crawl_table.pop(f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}")
+                # send attack to get crawl topic to crawl hosts
+                await get_crawl_topic.send(key=f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}", value=attack)
 
 
 @app.agent(change_crawl_topic)

@@ -46,7 +46,7 @@ STORE = "memory://"
 CACHE = "memory://"
 PROCESSING_GUARANTEE = "exactly_once"
 ORIGIN = "doscrawler.app"
-AUTODISCOVER = ["doscrawler.targets", "doscrawler.hosts", "doscrawler.crawls", "doscrawler.dumps", "doscrawler.slacks"]
+AUTODISCOVER = ["doscrawler.attacks", "doscrawler.hosts", "doscrawler.crawls", "doscrawler.dumps", "doscrawler.slacks"]
 KEY_SERIALIZER = "raw"
 VALUE_SERIALIZER = "json"
 TOPIC_PARTITIONS = 1
@@ -70,17 +70,17 @@ STREAM_BUFFER_MAXSIZE = 4096
 WORKER_REDIRECT_STDOUTS = True
 WORKER_REDIRECT_STDOUTS_LEVEL = "INFO"
 WEB_ENABLED = False
-RETENTION_INTERVAL = 86400 # 1 day
+RETENTION_INTERVAL = 10800 # 3 hours
 
 # attacks
-ATTACK_MERGE_INTERVAL = 30
-ATTACK_TTL = 200 # how long to follow attack from latest time of latest attack vector
+ATTACK_MERGE_INTERVAL = 15
+ATTACK_TTL = 240 # how long to follow attack from latest time of latest attack vector
 ATTACK_CONCURRENCY = 10
-ATTACK_RANDOM_ATTACK_INTERVAL = 20
+ATTACK_RANDOM_ATTACK_INTERVAL = 30
 
 # hosts
 HOST_CLEAN_TIMER = 60
-HOST_CACHE_INTERVAL = 60
+HOST_CACHE_INTERVAL = 30
 HOST_MAX_NUM = 10
 HOST_CONCURRENCY = 5
 
@@ -88,12 +88,13 @@ HOST_CONCURRENCY = 5
 CRAWL_RETRIES = 3
 CRAWL_RETRIES_BACKOFF = 5 # 5 -> 10 -> 20 seconds delay
 CRAWL_REPEAT_INTERVAL = 60
-CRAWL_CACHE_INTERVAL = 15
 CRAWL_REQUEST_HEADER = {}
 CRAWL_REQUEST_TIMEOUT = 20
 CRAWL_BODY_MAX_BYTES = 2097152
-CRAWL_GET_WAIT_TIMER = 1
+CRAWL_GET_WAIT_TIMER = 2
 CRAWL_CONCURRENCY = 10
+CRAWL_CACHE_INTERVAL = 30
+CRAWL_CLEAN_TIMER = 60
 
 # dumps
 DUMP_CRON = "*/5 * * * *" # every five minutes

@@ -130,7 +130,7 @@ class Attack(Record, coerce=True, serializer="json"):
         # sort and uncompress crawls
         attack_dict["crawls"] = sorted(
             [{
-                "hosts": crawl.host,
+                "host": crawl.host,
                 "status": crawl.status,
                 "time": crawl.time,
                 "record": gzip.GzipFile(fileobj=BytesIO(base64.b64decode(crawl.record))).read().decode("utf-8", errors="ignore")
@@ -208,7 +208,7 @@ class Attack(Record, coerce=True, serializer="json"):
         if hosts:
             # has hosts to crawl
             # get number of crawls
-            num_crawls = min([len([crawl for crawl in self.crawls if crawl.host is host]) for host in hosts])
+            num_crawls = min([len([crawl for crawl in self.crawls if crawl.host == host]) for host in hosts])
 
             if not num_crawls:
                 # not yet been crawled
@@ -219,7 +219,7 @@ class Attack(Record, coerce=True, serializer="json"):
             else:
                 # has already been crawled
                 # get if any most recent crawl failed
-                failed_crawls = any([max([crawl for crawl in self.crawls if crawl.host is host], key=lambda crawl: crawl.time).is_success is False for host in hosts])
+                failed_crawls = any([max([crawl for crawl in self.crawls if crawl.host == host], key=lambda crawl: crawl.time).is_success == False for host in hosts])
 
                 if not failed_crawls:
                     # all most recent crawls on hosts succeeded

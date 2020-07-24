@@ -106,7 +106,7 @@ class Dump(Record):
             # look up attack in attack table
             attack = attack_table[attack_key]
 
-            if attack and attack.get_ttl(time=self.time) <= 0:
+            if attack and attack.get_ttl() <= 0:
                 # attack still exists in table and its time to live has expired
                 # get decoded attack as dictionary
                 attack_dict = attack.get_decoded_dict()
@@ -139,8 +139,13 @@ class Dump(Record):
             "attacks": await self._get_attacks()
         }
 
+        # get descriptions
+        num_attacks = len(dump["attacks"])
+        num_hosts = sum([len(attack["hosts"]) for attack in dump["attacks"]])
+        num_crawls = sum([len(attack["crawls"]) for attack in dump["attacks"]])
+
         # write dump as gzip
         with gzip.GzipFile(filename=dir, mode="w", compresslevel=settings.DUMP_COMPRESS_LEVEL) as file:
             file.write(bytes(json.dumps(dump, default=self.json_serializer), encoding="utf-8"))
 
-        return dump["name"], dump["time"], len(dump["attacks"])
+        return self.name, self.time, num_attacks, num_hosts, num_crawls

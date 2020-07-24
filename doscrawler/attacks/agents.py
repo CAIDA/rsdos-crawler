@@ -35,10 +35,6 @@ async def get_attacks(attack_vectors):
         attack = Attack(ip=attack_vector.target_ip, start_time=attack_vector.start_time, latest_time=attack_vector.latest_time, attack_vectors=[attack_vector])
         # send attack to change attack topic
         await change_attack_topic.send(key=f"add/{attack.ip}/{attack.start_time}", value=attack)
-        # get attack from attack vector for get host topic
-        attack = Attack(ip=attack_vector.target_ip, start_time=attack_vector.start_time, latest_time=attack_vector.latest_time)
-        # send attack to get host topic
-        await get_host_topic.send(key=f"{attack.ip}/{attack.start_time}", value=attack)
 
 
 @app.agent(change_attack_topic, concurrency=1)
@@ -86,66 +82,87 @@ async def change_attacks(attacks):
                         attack_candidate = Attack(ip=attack_candidate.ip, start_time=attack_start_time, latest_time=attack_latest_time)
                         # change attack candidate in attack candidate table
                         attack_candidate_table[attack_candidate.ip] = attack_candidate
-
-                elif attack_candidate and attack_candidate.latest_time < attack.start_time:
-                    # attack candidate cannot be merged with new attack
-                    # new attack replaces current attack candidate
-                    # get attack candidate
-                    attack_candidate = Attack(ip=attack.ip, start_time=attack.start_time, latest_time=attack.latest_time)
-                    # change attack candidate in attack candidate table
-                    attack_candidate_table[attack_candidate.ip] = attack_candidate
+                        # send attack candidate to get host topic
+                        await get_host_topic.send(key=f"{attack_candidate.ip}/{attack_candidate.start_time}", value=attack_candidate)
 
                 elif attack_candidate and attack_candidate.start_time > attack.latest_time:
-                    # attack candidate cannot be merged with new attack
-                    # new attack is not used as new attack candidate
-                    attack_candidate = Attack(ip=attack.ip, start_time=attack.start_time, latest_time=attack.latest_time)
+                    # attack candidate cannot be merged with older attack
+                    # older attack has no effect on current attack candidate and has no attack candidate thus
+                    attack_candidate = None
 
                 else:
-                    # no attack candidate yet
+                    # attack candidate cannot be merged with new attack or no attack candidate yet
                     # get attack candidate
                     attack_candidate = Attack(ip=attack.ip, start_time=attack.start_time, latest_time=attack.latest_time)
                     # change attack candidate in attack candidate table
                     attack_candidate_table[attack_candidate.ip] = attack_candidate
+                    # send attack candidate to get host topic
+                    await get_host_topic.send(key=f"{attack_candidate.ip}/{attack_candidate.start_time}", value=attack_candidate)
 
-                ########################################################################################################
-                # TODO: check logic of merging attacks forward and backwards                                           #
-                ########################################################################################################
+                if attack_candidate:
+                    # attack has a valid candidate
+                    # look up current attack for attack
+                    attack_current = attack_table[f"{attack_candidate.ip}/{attack_candidate.start_time}"]
 
-                # look up current attack for attack
-                attack_current = attack_table[f"{attack_candidate.ip}/{attack_candidate.start_time}"]
+                    if attack_current:
+                        # attack has already been added to attack table
+                        # get attack vectors
+                        attack_attack_vectors_current_keys = [f"{attack_vector.start_time}/{attack_vector.latest_time}" for attack_vector in attack_current.attack_vectors]
+                        attack_attack_vectors_new = [attack_vector for attack_vector in attack.attack_vectors if f"{attack_vector.start_time}/{attack_vector.latest_time}" not in attack_attack_vectors_current_keys]
+                        attack_attack_vectors = attack_current.attack_vectors + attack_attack_vectors_new
+                        # get hosts
+                        attack_hosts_current = attack_current.hosts
+                        attack_hosts_new = [host for host in attack.hosts if host not in attack_hosts_current]
+                        attack_hosts = attack_current.hosts + attack_hosts_new
+                        # get crawls
+                        attack_crawls_current_keys = [f"{crawl.host}/{crawl.time}" for crawl in attack_current.crawls]
+                        attack_crawls_new = [crawl for crawl in attack.crawls if f"{crawl.host}/{crawl.time}" not in attack_crawls_current_keys]
+                        attack_crawls = attack_current.crawls + attack_crawls_new
+                        # get attack
+                        attack = Attack(
+                            ip=attack_candidate.ip, start_time=attack_candidate.start_time,
+                            latest_time=attack_candidate.latest_time, attack_vectors=attack_attack_vectors,
+                            hosts=attack_hosts, crawls=attack_crawls
+                        )
 
-                if attack_current:
-                    # attack has already been changed in attack table
-                    # get attack vectors
-                    attack_attack_vectors_current_keys = [f"{attack_vector.start_time}/{attack_vector.latest_time}" for attack_vector in attack_current.attack_vectors]
-                    attack_attack_vectors_new = [attack_vector for attack_vector in attack.attack_vectors if f"{attack_vector.start_time}/{attack_vector.latest_time}" not in attack_attack_vectors_current_keys]
-                    attack_attack_vectors = attack_current.attack_vectors + attack_attack_vectors_new
-                    # get hosts
-                    attack_hosts_current = attack_current.hosts
-                    attack_hosts_new = [host for host in attack.hosts if host not in attack_hosts_current]
-                    attack_hosts = attack_candidate.hosts + attack_hosts_new
-                    # get crawls
-                    attack_crawls_current_keys = [f"{crawl.host}/{crawl.time}" for crawl in attack_current.crawls]
-                    attack_crawls_new = [crawl for crawl in attack.crawls if f"{crawl.host}/{crawl.time}" not in attack_crawls_current_keys]
-                    attack_crawls = attack_candidate.crawls + attack_crawls_new
-                    # get attack
-                    attack = Attack(
-                        ip=attack_candidate.ip, start_time=attack_candidate.start_time,
-                        latest_time=attack_candidate.latest_time, attack_vectors=attack_attack_vectors,
-                        hosts=attack_hosts, crawls=attack_crawls
-                    )
+                    else:
+                        # attack has not yet been added to attack table
+                        # get attack
+                        attack = Attack(
+                            ip=attack_candidate.ip, start_time=attack_candidate.start_time,
+                            latest_time=attack_candidate.latest_time, attack_vectors=attack.attack_vectors,
+                            hosts=attack.hosts, crawls=attack.crawls
+                        )
+
+                    # change attack in attack table
+                    attack_table[f"{attack.ip}/{attack.start_time}"] = attack
 
                 else:
-                    # attack has not yet been added to attack table
-                    # get attack
-                    attack = Attack(
-                        ip=attack_candidate.ip, start_time=attack_candidate.start_time,
-                        latest_time=attack_candidate.latest_time, attack_vectors=attack.attack_vectors,
-                        hosts=attack.hosts, crawls=attack.crawls
-                    )
+                    # attack has no valid candidate
+                    # look up current attack for attack
+                    attack_current = attack_table[f"{attack.ip}/{attack.start_time}"]
 
-                # change attack in attack table
-                attack_table[f"{attack.ip}/{attack.start_time}"] = attack
+                    if attack_current:
+                        # attack has already been added to attack table
+                        # get attack vectors
+                        attack_attack_vectors_current_keys = [f"{attack_vector.start_time}/{attack_vector.latest_time}" for attack_vector in attack_current.attack_vectors]
+                        attack_attack_vectors_new = [attack_vector for attack_vector in attack.attack_vectors if f"{attack_vector.start_time}/{attack_vector.latest_time}" not in attack_attack_vectors_current_keys]
+                        attack_attack_vectors = attack_current.attack_vectors + attack_attack_vectors_new
+                        # get hosts
+                        attack_hosts_current = attack_current.hosts
+                        attack_hosts_new = [host for host in attack.hosts if host not in attack_hosts_current]
+                        attack_hosts = attack_current.hosts + attack_hosts_new
+                        # get crawls
+                        attack_crawls_current_keys = [f"{crawl.host}/{crawl.time}" for crawl in attack_current.crawls]
+                        attack_crawls_new = [crawl for crawl in attack.crawls if f"{crawl.host}/{crawl.time}" not in attack_crawls_current_keys]
+                        attack_crawls = attack_current.crawls + attack_crawls_new
+                        # get attack
+                        attack = Attack(
+                            ip=attack.ip, start_time=attack.start_time, latest_time=attack.latest_time,
+                            attack_vectors=attack_attack_vectors, hosts=attack_hosts, crawls=attack_crawls
+                        )
+                        # change attack in attack table
+                        attack_table[f"{attack.ip}/{attack.start_time}"] = attack
 
         elif attack_key.startswith("delete"):
             # attack should be deleted
@@ -154,7 +171,7 @@ async def change_attacks(attacks):
 
             if attack_candidate_current and attack_candidate_current.latest_time == attack.latest_time:
                 # delete attack from attack candidate table
-                attack_candidate_table.pop(f"{attack.ip}/{attack.start_time}")
+                attack_candidate_table.pop(f"{attack.ip}")
 
             # look up attack in attack table
             attack_current = attack_table[f"{attack.ip}/{attack.start_time}"]

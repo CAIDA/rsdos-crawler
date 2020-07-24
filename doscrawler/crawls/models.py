@@ -164,7 +164,7 @@ class Crawl(Record, coerce=True, serializer="json"):
         # associate request and response
         warc_response_id = warc_response.rec_headers.get_header("WARC-Record-ID")
         warc_request.rec_headers.add_header("WARC-Concurrent-To", warc_response_id)
-        # add ip address of target
+        # add ip address of attack
         warc_request.rec_headers.add_header("WARC-IP-Address", ip)
         warc_response.rec_headers.add_header("WARC-IP-Address", ip)
         # add truncated

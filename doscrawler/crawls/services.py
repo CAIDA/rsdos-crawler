@@ -16,7 +16,6 @@ from simple_settings import settings
 from doscrawler.app import app
 from doscrawler.crawls.topics import change_crawl_topic, change_wait_crawl_topic
 from doscrawler.crawls.tables import crawl_table, wait_crawl_table
-from doscrawler.crawls.topics import get_crawl_topic
 
 
 @app.service
@@ -56,12 +55,10 @@ class CrawlService(Service):
             # look up attack in wait crawl table
             attack = wait_crawl_table[attack_key]
 
-            if attack and attack.is_ready_crawl:
+            if attack and attack.is_need_crawl:
                 # attack has finished waiting
-                # send attack to get crawl topic to crawl hosts
-                await get_crawl_topic.send(key=attack_key, value=attack)
                 # send attack to change wait crawl topic for deletion
-                await change_wait_crawl_topic.send(key=f"delete/{attack_key}", value=attack)
+                await change_wait_crawl_topic.send(key=f"delete/{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}", value=attack)
 
     @Service.timer(settings.CRAWL_CLEAN_TIMER)
     async def _clean_crawls(self):

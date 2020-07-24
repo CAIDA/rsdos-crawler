@@ -60,9 +60,9 @@ class AttackService(Service):
         for attack_ip in attack_ips:
             # for each random attack ip
             # get latest time
-            latest_time = datetime.now(timezone.utc) - timedelta(seconds=random.randint(-settings.ATTACK_RANDOM_ATTACK_INTERVAL+1, 0))
+            latest_time = datetime.now(timezone.utc) + timedelta(seconds=random.randint(-settings.ATTACK_RANDOM_ATTACK_INTERVAL+1, 0))
             # get start time
-            start_time = latest_time - timedelta(seconds=random.randint(-2*settings.ATTACK_RANDOM_ATTACK_INTERVAL+1, -1))
+            start_time = latest_time + timedelta(seconds=random.randint(-2*settings.ATTACK_RANDOM_ATTACK_INTERVAL+1, -1))
             # get random attack vector
             attack_vector = AttackVector(
                 target_ip=attack_ip,
@@ -80,3 +80,5 @@ class AttackService(Service):
             )
             # send random attack vector to get attack topic
             await attack_topic.send(value=attack_vector)
+
+            logging.info(f"Service to maintain attacks has sent random attack vector with ip {attack_ip} start time {start_time} latest time {latest_time}.")
