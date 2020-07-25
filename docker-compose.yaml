@@ -18,6 +18,8 @@ services:
     environment:
       - SIMPLE_SETTINGS=doscrawler.settings.production
       - BROKER=kafka://kafka:9092
+      - BROKER_CONSUMER=kafka://kafka:9092
+      - BROKER_PRODUCER=kafka://kafka:9092
       - BROKER_NAME=kafka
       - BROKER_PORT=9092
       - WORKER_ID=1
@@ -42,6 +44,8 @@ services:
     environment:
       - SIMPLE_SETTINGS=doscrawler.settings.production
       - BROKER=kafka://kafka:9092
+      - BROKER_CONSUMER=kafka://kafka:9092
+      - BROKER_PRODUCER=kafka://kafka:9092
       - BROKER_NAME=kafka
       - BROKER_PORT=9092
       - WORKER_ID=2
@@ -52,8 +56,6 @@ services:
     image: wurstmeister/kafka
     hostname: kafka
     container_name: kafka
-    volumes:
-      - kafka-data:/kafka/
     ports:
     - "9092:9092"
     depends_on:
@@ -62,10 +64,9 @@ services:
       - KAFKA_LISTENERS=PLAINTEXT://kafka:9092
       - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_MESSAGE_MAX_BYTES=209715200
+      - KAFKA_MESSAGE_MAX_BYTES=2097152
       - KAFKA_NUM_PARTITIONS=4
       - KAFKA_BROKER_ID=1
-      - KAFKA_LOG_DIRS=/kafka/1
   zookeeper:
     image: wurstmeister/zookeeper
     hostname: zookeeper
@@ -74,6 +75,4 @@ services:
 
 volumes:
   doscrawler-data:
-    driver: local
-  kafka-data:
     driver: local
