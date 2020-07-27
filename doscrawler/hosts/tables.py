@@ -16,11 +16,10 @@ from doscrawler.hosts.models import HostGroup
 from doscrawler.hosts.topics import log_host_topic
 
 
-host_table = app.Table(
+host_table = app.GlobalTable(
     name="doscrawler.host",
     partitions=settings.TOPIC_PARTITIONS,
     key_type=str,
     value_type=HostGroup,
-    default=bool,
-    changelog_topic=log_host_topic
+    default=bool
 )

@@ -37,6 +37,7 @@ log_attack_topic = app.topic(
     "doscrawler.attack.log",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.RETENTION_INTERVAL,
+    allow_empty=True,
     value_type=Attack
 )
 
@@ -44,5 +45,6 @@ log_attack_candidate_topic = app.topic(
     "doscrawler.attack.candidate.log",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.ATTACK_MERGE_INTERVAL,
+    allow_empty=True,
     value_type=Attack
 )

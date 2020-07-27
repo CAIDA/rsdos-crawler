@@ -36,5 +36,6 @@ log_host_topic = app.topic(
     "doscrawler.host.log",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.HOST_CACHE_INTERVAL,
+    allow_empty=True,
     value_type=HostGroup
 )

@@ -17,20 +17,18 @@ from doscrawler.crawls.models import Crawl
 from doscrawler.crawls.topics import log_crawl_topic, log_wait_crawl_topic
 
 
-crawl_table = app.Table(
+crawl_table = app.GlobalTable(
     name="doscrawler.crawl",
     partitions=settings.TOPIC_PARTITIONS,
     key_type=str,
     value_type=Crawl,
-    default=bool,
-    changelog_topic=log_crawl_topic
+    default=bool
 )
 
-wait_crawl_table = app.Table(
+wait_crawl_table = app.GlobalTable(
     name="doscrawler.crawl.wait",
     partitions=settings.TOPIC_PARTITIONS,
     key_type=str,
     value_type=Attack,
-    default=bool,
-    changelog_topic=log_wait_crawl_topic
+    default=bool
 )

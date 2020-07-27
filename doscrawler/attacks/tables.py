@@ -16,20 +16,18 @@ from doscrawler.attacks.models import Attack
 from doscrawler.attacks.topics import log_attack_topic, log_attack_candidate_topic
 
 
-attack_table = app.Table(
+attack_table = app.GlobalTable(
     name="doscrawler.attack",
     partitions=settings.TOPIC_PARTITIONS,
     key_type=str,
     value_type=Attack,
-    default=bool,
-    changelog_topic=log_attack_topic
+    default=bool
 )
 
-attack_candidate_table = app.Table(
+attack_candidate_table = app.GlobalTable(
     name="doscrawler.attack.candidate",
     partitions=settings.TOPIC_PARTITIONS,
     key_type=str,
     value_type=Attack,
-    default=bool,
-    changelog_topic=log_attack_candidate_topic
+    default=bool
 )

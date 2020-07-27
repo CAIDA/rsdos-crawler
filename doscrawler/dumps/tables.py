@@ -15,10 +15,9 @@ from doscrawler.dumps.models import Dump
 from doscrawler.dumps.topics import log_dump_topic
 
 
-dump_table = app.Table(
+dump_table = app.GlobalTable(
     name="doscrawler.dump",
     key_type=str,
     value_type=Dump,
-    default=bool,
-    changelog_topic=log_dump_topic
+    default=bool
 )

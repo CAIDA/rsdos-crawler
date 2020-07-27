@@ -44,6 +44,10 @@ class AttackService(Service):
 
         logging.info("Service to maintain attacks is stopping.")
 
+    ####################################################################################################################
+    # TODO: delete service for random attack vectors                                                                   #
+    ####################################################################################################################
+
     @Service.timer(settings.ATTACK_RANDOM_ATTACK_INTERVAL)
     async def _send_random_attack_vectors(self):
         """
@@ -60,9 +64,9 @@ class AttackService(Service):
         for attack_ip in attack_ips:
             # for each random attack ip
             # get latest time
-            latest_time = datetime.now(timezone.utc) + timedelta(seconds=random.randint(-settings.ATTACK_RANDOM_ATTACK_INTERVAL+1, 0))
+            latest_time = datetime.now(timezone.utc) + timedelta(seconds=random.randint(-10, 0))
             # get start time
-            start_time = latest_time + timedelta(seconds=random.randint(-2*settings.ATTACK_RANDOM_ATTACK_INTERVAL+1, -1))
+            start_time = latest_time + timedelta(seconds=random.randint(-1.5*settings.ATTACK_RANDOM_ATTACK_INTERVAL+1, -1))
             # get random attack vector
             attack_vector = AttackVector(
                 target_ip=attack_ip,

@@ -44,6 +44,7 @@ log_crawl_topic = app.topic(
     "doscrawler.crawl.log",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.CRAWL_CACHE_INTERVAL,
+    allow_empty=True,
     value_type=Crawl
 )
 
@@ -51,5 +52,6 @@ log_wait_crawl_topic = app.topic(
     "doscrawler.crawl.wait.log",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.RETENTION_INTERVAL,
+    allow_empty=True,
     value_type=Attack
 )

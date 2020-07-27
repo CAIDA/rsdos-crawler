@@ -27,5 +27,6 @@ log_dump_topic = app.topic(
     "doscrawler.dump.log",
     partitions=settings.TOPIC_PARTITIONS,
     retention=settings.RETENTION_INTERVAL,
+    allow_empty=True,
     value_type=Dump
 )
