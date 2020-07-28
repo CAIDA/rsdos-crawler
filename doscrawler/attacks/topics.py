@@ -12,17 +12,14 @@ This module defines the topics for the attacks in the DoS crawler.
 
 from simple_settings import settings
 from doscrawler.app import app
-from doscrawler.attacks.models import Attack, AttackVector
+from doscrawler.attacks.models import Attack
+from doscrawler.attacks.schemas import AttackSchema
 
-################################################################################
-# TODO: change get_attack_topic to stardust.rsdos.attacks topic on other kafka #
-################################################################################
 
 attack_topic = app.topic(
-    "doscrawler.attack",
-    partitions=settings.TOPIC_PARTITIONS,
-    retention=settings.RETENTION_INTERVAL,
-    value_type=AttackVector
+    "stardust.rsdos.attacks",
+    value_type=bytes,
+    schema=AttackSchema()
 )
 
 change_attack_topic = app.topic(

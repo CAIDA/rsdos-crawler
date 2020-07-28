@@ -7,3 +7,4 @@ pytz==2020.1
 warcio==1.7.3
 slackclient==2.7.2
 aiohttp==3.6.2
+fastavro==0.23.6

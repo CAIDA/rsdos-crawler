@@ -42,6 +42,8 @@ LOGGING = {
 
 DEBUG = True
 BROKER = "kafka://localhost:9092"
+BROKER_CONSUMER = "kafka://localhost:9092"
+BROKER_PRODUCER = "kafka://localhost:9092"
 STORE = "memory://"
 CACHE = "memory://"
 PROCESSING_GUARANTEE = "exactly_once"

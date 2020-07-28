@@ -31,6 +31,8 @@ def configure(app, conf, **kwargs):
 
     conf.debug = settings.DEBUG
     conf.broker = settings.BROKER
+    conf.broker_consumer = settings.BROKER_CONSUMER
+    conf.broker_producer = settings.BROKER_PRODUCER
     conf.store = settings.STORE
     conf.cache = settings.CACHE
     conf.processing_guarantee = settings.PROCESSING_GUARANTEE

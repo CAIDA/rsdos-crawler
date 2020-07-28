@@ -12,6 +12,7 @@ This module defines the models for the attacks in the DoS crawler.
 
 import gzip
 import base64
+import ipaddress
 from io import BytesIO
 from faust import Record
 from typing import List
@@ -26,17 +27,58 @@ class AttackVector(Record, coerce=True, serializer="json"):
     """
 
     target_ip: str
-    nr_attacker_ips: int
-    nr_attacker_ips_in_interval: int
-    nr_attacker_ports: int
-    nr_target_ports: int
-    nr_packets: int
-    nr_packets_in_interval: int
-    nr_bytes: int
-    nr_bytes_in_interval: int
-    max_ppm: int
     start_time: datetime
     latest_time: datetime
+    bin_time: datetime
+    initial_packet_len: int
+    target_protocol: int
+    attacker_ip_cnt: int
+    attack_port_cnt: int
+    target_port_cnt: int
+    packet_cnt: int
+    icmp_mismatches: int
+    byte_cnt: int
+    max_ppm_interval: int
+
+    @classmethod
+    async def create_attack_vector(cls, attack):
+        """
+        Create attack vector from other format
+
+        :param attack: [dict] attack
+        :return: [doscrawler.attacks.models.AttackVector] created attack vector from attack
+        """
+
+        attack_vector = cls(**cls._get_parsed_attack(attack=attack))
+
+        return attack_vector
+
+    @staticmethod
+    def _get_parsed_attack(attack):
+        """
+        Get parsed dictionary with attributes of attack vector from attack
+
+        :param attack: [dict] attack
+        :return: [dict] parsed dictionary with attributes of attack vector
+        """
+
+        parsed_attack = {}
+
+        parsed_attack["target_ip"] = str(ipaddress.IPv4Address(int(attack["target_ip"])))
+        parsed_attack["start_time"] = datetime.fromtimestamp(int(attack["start_time_sec"]), timezone.utc) + timedelta(microseconds=int(attack["start_time_usec"]))
+        parsed_attack["latest_time"] = datetime.fromtimestamp(int(attack["latest_time_sec"]), timezone.utc) + timedelta(microseconds=int(attack["latest_time_usec"]))
+        parsed_attack["bin_time"] = datetime.fromtimestamp(int(attack["bin_timestamp"]), timezone.utc)
+        parsed_attack["initial_packet_len"] = int(attack["initial_packet_len"])
+        parsed_attack["target_protocol"] = int(attack["target_protocol"])
+        parsed_attack["attacker_ip_cnt"] = int(attack["attacker_ip_cnt"])
+        parsed_attack["attack_port_cnt"] = int(attack["attack_port_cnt"])
+        parsed_attack["target_port_cnt"] = int(attack["target_port_cnt"])
+        parsed_attack["packet_cnt"] = int(attack["packet_cnt"])
+        parsed_attack["icmp_mismatches"] = int(attack["icmp_mismatches"])
+        parsed_attack["byte_cnt"] = int(attack["byte_cnt"])
+        parsed_attack["max_ppm_interval"] = int(attack["max_ppm_interval"])
+
+        return parsed_attack
 
 
 class Attack(Record, coerce=True, serializer="json"):

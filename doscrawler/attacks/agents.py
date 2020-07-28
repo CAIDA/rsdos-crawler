@@ -14,27 +14,30 @@ import logging
 from simple_settings import settings
 from doscrawler.app import app
 from doscrawler.hosts.topics import get_host_topic
-from doscrawler.attacks.models import Attack
+from doscrawler.attacks.models import Attack, AttackVector
 from doscrawler.attacks.topics import attack_topic, change_attack_topic
 from doscrawler.attacks.tables import attack_table, attack_candidate_table
 
 
 @app.agent(attack_topic, concurrency=settings.ATTACK_CONCURRENCY)
-async def get_attacks(attack_vectors):
+async def get_attacks(attack_batches):
     """
     Get attacks from attack vectors
 
-    :param attack_vectors: [faust.types.streams.StreamT] stream of attack vectors from attack topic
+    :param attack_batches: [faust.types.streams.StreamT] stream of attack batches with attack vectors from attack topic
     :return:
     """
 
     logging.info("Agent to get attacks from attack vectors is ready to receive attack vectors.")
 
-    async for attack_vector in attack_vectors:
-        # get attack from attack vector for change attack topic
-        attack = Attack(ip=attack_vector.target_ip, start_time=attack_vector.start_time, latest_time=attack_vector.latest_time, attack_vectors=[attack_vector])
-        # send attack to change attack topic
-        await change_attack_topic.send(key=f"add/{attack.ip}/{attack.start_time}", value=attack)
+    async for attack_batch in attack_batches:
+        for attack_vector in attack_batch:
+            # get parsed attack vector from attack vector
+            attack_vector = await AttackVector.create_attack_vector(attack=attack_vector)
+            # get attack from attack vector for change attack topic
+            attack = Attack(ip=attack_vector.target_ip, start_time=attack_vector.start_time, latest_time=attack_vector.latest_time, attack_vectors=[attack_vector])
+            # send attack to change attack topic
+            await change_attack_topic.send(key=f"add/{attack.ip}/{attack.start_time}", value=attack)
 
 
 @app.agent(change_attack_topic, concurrency=1)
