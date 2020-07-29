@@ -18,7 +18,7 @@ services:
     environment:
       - SIMPLE_SETTINGS=doscrawler.settings.production
       - BROKER=kafka://kafka:9092
-      - BROKER_CONSUMER=kafka://localhost:9092;kafka://kafka.rogues.caida.org:9392
+      - BROKER_CONSUMER=kafka://kafka:9092;kafka://kafka.rogues.caida.org:9392
       - BROKER_PRODUCER=kafka://kafka:9092
       - BROKER_NAME=kafka
       - BROKER_PORT=9092
@@ -44,7 +44,7 @@ services:
     environment:
       - SIMPLE_SETTINGS=doscrawler.settings.production
       - BROKER=kafka://kafka:9092
-      - BROKER_CONSUMER=kafka://localhost:9092;kafka://kafka.rogues.caida.org:9392
+      - BROKER_CONSUMER=kafka://kafka:9092;kafka://kafka.rogues.caida.org:9392
       - BROKER_PRODUCER=kafka://kafka:9092
       - BROKER_NAME=kafka
       - BROKER_PORT=9092
