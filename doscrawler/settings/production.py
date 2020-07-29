@@ -42,8 +42,6 @@ LOGGING = {
 
 DEBUG = False
 BROKER = "kafka://localhost:9092"
-BROKER_CONSUMER = "kafka://localhost:9092;kafka://kafka.rogues.caida.org:9392"
-BROKER_PRODUCER = "kafka://localhost:9092"
 STORE = "memory://"
 CACHE = "memory://"
 PROCESSING_GUARANTEE = "exactly_once"
@@ -77,13 +75,13 @@ RETENTION_INTERVAL = 10800 # 3 hours
 # attacks
 ATTACK_MERGE_INTERVAL = 1800 # 30 minutes
 ATTACK_TTL = 7200 # 2 hours # how long to follow attack from latest time of latest attack vector
-ATTACK_CONCURRENCY = 1
+ATTACK_CONCURRENCY = 3
 
 # hosts
 HOST_CLEAN_TIMER = 3600
 HOST_CACHE_INTERVAL = 3600
 HOST_MAX_NUM = 10
-HOST_CONCURRENCY = 5
+HOST_CONCURRENCY = 3
 
 # crawls
 CRAWL_RETRIES = 3
@@ -93,7 +91,7 @@ CRAWL_REQUEST_HEADER = {}
 CRAWL_REQUEST_TIMEOUT = 20
 CRAWL_BODY_MAX_BYTES = 2097152
 CRAWL_GET_WAIT_TIMER = 10
-CRAWL_CONCURRENCY = 60
+CRAWL_CONCURRENCY = 30
 CRAWL_CACHE_INTERVAL = 900 # 15 minutes
 CRAWL_CLEAN_TIMER = 1800
 

@@ -18,6 +18,8 @@ from doscrawler.attacks.schemas import AttackSchema
 
 attack_topic = app.topic(
     "stardust.rsdos.attacks",
+    partitions=settings.TOPIC_PARTITIONS,
+    retention=settings.RETENTION_INTERVAL,
     value_type=bytes,
     schema=AttackSchema()
 )

@@ -18,8 +18,6 @@ services:
     environment:
       - SIMPLE_SETTINGS=doscrawler.settings.production
       - BROKER=kafka://kafka:9092
-      - BROKER_CONSUMER=kafka://kafka:9092;kafka://kafka.rogues.caida.org:9392
-      - BROKER_PRODUCER=kafka://kafka:9092
       - BROKER_NAME=kafka
       - BROKER_PORT=9092
       - WORKER_ID=1
@@ -44,8 +42,6 @@ services:
     environment:
       - SIMPLE_SETTINGS=doscrawler.settings.production
       - BROKER=kafka://kafka:9092
-      - BROKER_CONSUMER=kafka://kafka:9092;kafka://kafka.rogues.caida.org:9392
-      - BROKER_PRODUCER=kafka://kafka:9092
       - BROKER_NAME=kafka
       - BROKER_PORT=9092
       - WORKER_ID=2
@@ -72,6 +68,18 @@ services:
     hostname: zookeeper
     ports:
       - "2181:2181"
+  mirrormaker:
+    image: ambuds/mirror-maker
+    container_name: mirrormaker
+    depends_on:
+      - kafka
+      - zookeeper
+      - doscrawler1
+      - doscrawler2
+    environment:
+      - DESTINATION=kafka:9092
+      - SOURCE=kafka.rogues.caida.org:9392
+      - WHITELIST=stardust.rsdos.attacks
 
 volumes:
   doscrawler-data:

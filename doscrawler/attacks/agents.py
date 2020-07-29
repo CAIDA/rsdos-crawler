@@ -31,13 +31,19 @@ async def get_attacks(attack_batches):
     logging.info("Agent to get attacks from attack vectors is ready to receive attack vectors.")
 
     async for attack_batch in attack_batches:
+        # log got new unprocessed attack batch
+        logging.info("Agent to get attacks from attack vectors is working on a new unprocessed attack batch.")
+
         for attack_vector in attack_batch:
             # get parsed attack vector from attack vector
             attack_vector = AttackVector.create_attack_vector(attack=attack_vector)
             # get attack from attack vector for change attack topic
             attack = Attack(ip=attack_vector.target_ip, start_time=attack_vector.start_time, latest_time=attack_vector.latest_time, attack_vectors=[attack_vector])
-            # send attack to change attack topic
-            await change_attack_topic.send(key=f"add/{attack.ip}/{attack.start_time}", value=attack)
+
+            if attack.is_alive_soon:
+                # attack will be still alive after processing
+                # send attack to change attack topic
+                await change_attack_topic.send(key=f"add/{attack.ip}/{attack.start_time}", value=attack)
 
 
 @app.agent(change_attack_topic, concurrency=1)
