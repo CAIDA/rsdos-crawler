@@ -77,8 +77,7 @@ RETENTION_INTERVAL = 10800 # 3 hours
 # attacks
 ATTACK_MERGE_INTERVAL = 1800 # 30 minutes
 ATTACK_TTL = 7200 # 2 hours # how long to follow attack from latest time of latest attack vector
-ATTACK_CONCURRENCY = 10
-ATTACK_RANDOM_ATTACK_INTERVAL = 30
+ATTACK_CONCURRENCY = 1
 
 # hosts
 HOST_CLEAN_TIMER = 3600

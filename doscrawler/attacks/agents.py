@@ -33,7 +33,7 @@ async def get_attacks(attack_batches):
     async for attack_batch in attack_batches:
         for attack_vector in attack_batch:
             # get parsed attack vector from attack vector
-            attack_vector = await AttackVector.create_attack_vector(attack=attack_vector)
+            attack_vector = AttackVector.create_attack_vector(attack=attack_vector)
             # get attack from attack vector for change attack topic
             attack = Attack(ip=attack_vector.target_ip, start_time=attack_vector.start_time, latest_time=attack_vector.latest_time, attack_vectors=[attack_vector])
             # send attack to change attack topic

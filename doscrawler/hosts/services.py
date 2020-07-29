@@ -58,5 +58,5 @@ class HostService(Service):
 
             if host and not host.is_valid:
                 # for each expired host
-                # send host to change object topic for deletion
+                # send host to change host topic for deletion
                 await change_host_topic.send(key=f"delete/{host.ip}", value=host)

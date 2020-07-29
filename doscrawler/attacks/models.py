@@ -41,7 +41,7 @@ class AttackVector(Record, coerce=True, serializer="json"):
     max_ppm_interval: int
 
     @classmethod
-    async def create_attack_vector(cls, attack):
+    def create_attack_vector(cls, attack):
         """
         Create attack vector from other format
 

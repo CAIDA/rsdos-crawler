@@ -55,9 +55,9 @@ async def change_dumps(dumps):
             # look up dump in dump table
             dump_current = dump_table[dump.name]
 
-            if dump_current:
+            if dump_current and not dump_current.is_valid:
                 # delete dump from dump table
-                dump_table.pop(dump.name)
+                dump_table.pop(dump_current.name)
 
         else:
             raise Exception(

@@ -55,7 +55,7 @@ class Slack(Record, coerce=True, serializer="json"):
         :return:
         """
 
-        if settings.SLACK_TOKEN:
+        if settings.SLACK_TOKEN and settings.SLACK_CHANNEL:
             # slack is configured in settings
             # get client
             client = WebClient(token=settings.SLACK_TOKEN)

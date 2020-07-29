@@ -23,15 +23,13 @@ send by them.
 
 - **Stream attacks**: The RSDoS attacks are streamed from the UCSD Telescope DDoS Metadata. This data is periodically 
 written in objects in a Swift container. In these objects are recorded the observed attack vectors in the respective 
-time period. The RSDoS Crawler relies on these vectors to identify targets of attacks. **In development! This should be 
-streamed from a Kafka topic!**
+time period. The RSDoS Crawler relies on these vectors to identify targets of attacks.
 - **Track attacks**: For one and the same attack, on a specific IP address at a specific start time, there are usually 
 recorded many attack vectors over time. To track an attack over its entire duration, these vectors are considered 
 dependently. In this way, the target of an attack may be crawled over an extended period of time. And the results of the 
 RSDoS Crawler are neatly collected for each attack.
 - **Resolve hosts**: The IP addresses of the attacked targets are resolved to their host names with a naive reverse DNS
-resolution. The already resolved host names are cached. :warning: **In development! This should be integrated with a 
-dedicated reserve DNS resolution!**
+resolution. The already resolved host names are cached.
 - **Crawl hosts**: The host names resolved from the targets are crawled in various ways. First, they are crawled as soon 
 as the attack is reported. Second, if hosts do not respond, then the crawl is tried again and again with a certain delay 
 until a maximum number of retries is exceeded. Third, all host names from the target are periodically recrawled with a 
