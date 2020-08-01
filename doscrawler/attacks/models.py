@@ -122,17 +122,17 @@ class Attack(Record, coerce=True, serializer="json"):
         return False
 
     @property
-    def is_need_crawl(self):
+    def finished_wait_crawl(self):
         """
-        Check if attack is in need of crawl
+        Check if attack has finished waiting for crawl
 
-        :return: [bool] needs crawl
+        :return: [bool] finished waiting for crawl
         """
 
         time_current = datetime.now(timezone.utc)
         time_next_crawl, _ = self.get_next_crawl()
 
-        if time_next_crawl and time_next_crawl <= time_current:
+        if not time_next_crawl or (time_next_crawl and time_next_crawl <= time_current):
             return True
 
         return False

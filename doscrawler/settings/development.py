@@ -99,7 +99,6 @@ CRAWL_CLEAN_TIMER = 60
 DUMP_CRON = "*/5 * * * *" # every five minutes
 DUMP_DIR = "data/"
 DUMP_COMPRESS_LEVEL = 7
-DUMP_CLEAN_TIMER = 60
 
 # slacks
 SLACK_TOKEN = ""

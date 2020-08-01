@@ -38,38 +38,42 @@ async def get_crawls(attacks):
         # get next crawl
         # use get_next_crawl_hosts if multiple hosts are sent in an attack
         # for now only attacks with single hosts are forwarded from get hosts agent
-        _, next_crawl_type = attack.get_next_crawl()
+        next_crawl_time, next_crawl_type = attack.get_next_crawl()
 
-        if next_crawl_type == "repeat":
-            # reset crawls on repeat
-            attack.reset_crawls()
+        if next_crawl_time:
+            # attack indeed needs to be crawled
+            if next_crawl_type == "repeat":
+                # reset crawls on repeat
+                attack.reset_crawls()
 
-        for host in attack.hosts:
-            # for each host name of attack
-            # for now only attacks with single hosts are forwarded from get hosts agent
-            # look up host in crawl table
-            attack_host_crawl = crawl_table[host]
+            for host in attack.hosts:
+                # for each host name of attack
+                # for now only attacks with single hosts are forwarded from get hosts agent
+                # look up host in crawl table
+                attack_host_crawl = crawl_table[host]
 
-            if attack_host_crawl and attack_host_crawl.is_valid:
-                # crawl of host is in crawl table and still valid
-                if f"{attack_host_crawl.host}/{attack_host_crawl.time}" not in [f"{crawl.host}/{crawl.time}" for crawl in attack.crawls]:
-                    # crawl is not in attack yet
+                if attack_host_crawl and attack_host_crawl.is_valid:
+                    # crawl of host is in crawl table and still valid
+                    if f"{attack_host_crawl.host}/{attack_host_crawl.time}" not in [f"{crawl.host}/{crawl.time}" for crawl in attack.crawls]:
+                        # crawl is not in attack yet
+                        # append crawl to attack
+                        attack.crawls.append(attack_host_crawl)
+
+                else:
+                    # crawl of host is not in table or is not valid anymore
+                    # get crawl
+                    attack_host_crawl = await Crawl.get_crawl(host=host, ip=attack.ip, connector=connector)
                     # append crawl to attack
                     attack.crawls.append(attack_host_crawl)
 
-            else:
-                # crawl of host is not in table or is not valid anymore
-                # get crawl
-                attack_host_crawl = await Crawl.get_crawl(host=host, ip=attack.ip, connector=connector)
-                # append crawl to attack
-                attack.crawls.append(attack_host_crawl)
-                # send crawl to change crawl topic
-                await change_crawl_topic.send(key=f"add/{host}", value=attack_host_crawl)
+                    if attack_host_crawl.is_success:
+                        # send crawl to change crawl topic
+                        await change_crawl_topic.send(key=f"add/{host}", value=attack_host_crawl)
 
-        # send to change attack topic to change attack
-        await change_attack_topic.send(key=f"add/{attack.ip}/{attack.start_time}", value=attack)
-        # send to wait crawl topic to retry and repeat crawls
-        await change_wait_crawl_topic.send(key=f"add/{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}", value=attack)
+            # send to change attack topic to change attack
+            await change_attack_topic.send(key=f"add/{attack.ip}/{attack.start_time}", value=attack)
+            # send to wait crawl topic to retry and repeat crawls
+            await change_wait_crawl_topic.send(key=f"add/{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}", value=attack)
 
 
 @app.agent(change_wait_crawl_topic, concurrency=1)
@@ -111,15 +115,15 @@ async def change_wait_crawls(attacks):
             # get current attack from wait crawl table
             attack_current = wait_crawl_table[f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}"]
 
-            if attack_current and attack_current.is_need_crawl:
-                # attack waiting for crawl is in need of crawl
+            if attack_current and attack_current.finished_wait_crawl:
+                # attack waiting for crawl has finished waiting for crawl
                 # delete wait crawl from wait crawl table when has not changed
                 wait_crawl_table.pop(f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}")
                 # send attack to get crawl topic to crawl hosts
                 await get_crawl_topic.send(key=f"{attack.ip}/{attack.start_time}/{'/'.join(attack.hosts)}", value=attack)
 
 
-@app.agent(change_crawl_topic)
+@app.agent(change_crawl_topic, concurrency=1)
 async def change_crawls(crawls):
     """
     Change crawl table by crawled and changed crawls
