@@ -96,6 +96,30 @@ services:
       - DUMP_DIR=/data/dumps/
       - SLACK_TOKEN=
       - SLACK_CHANNEL=
+  doscrawler5:
+    container_name: doscrawler5
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - doscrawler-data:/data/
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5mb"
+        max-file: "10"
+    depends_on:
+      - kafka
+      - zookeeper
+    environment:
+      - SIMPLE_SETTINGS=doscrawler.settings.production
+      - BROKER=kafka://kafka:9092
+      - BROKER_NAME=kafka
+      - BROKER_PORT=9092
+      - WORKER_ID=5
+      - DUMP_DIR=/data/dumps/
+      - SLACK_TOKEN=
+      - SLACK_CHANNEL=
   kafka:
     image: wurstmeister/kafka
     hostname: kafka
@@ -109,7 +133,10 @@ services:
       - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
       - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
       - KAFKA_MESSAGE_MAX_BYTES=20971520
-      - KAFKA_NUM_PARTITIONS=4
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
+      - KAFKA_PROCESSING_GUARANTEE=exactly_once
+      - KAFKA_NUM_PARTITIONS=5
       - KAFKA_BROKER_ID=1
   zookeeper:
     image: wurstmeister/zookeeper
@@ -126,6 +153,7 @@ services:
       - doscrawler2
       - doscrawler3
       - doscrawler4
+      - doscrawler5
     environment:
       - DESTINATION=kafka:9092
       - SOURCE=kafka.rogues.caida.org:9392

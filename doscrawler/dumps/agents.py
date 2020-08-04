@@ -11,6 +11,7 @@ This module defines the agents for the dumps of the DoS crawler.
 """
 
 import logging
+from simple_settings import settings
 from doscrawler.app import app
 from doscrawler.dumps.topics import change_dump_topic
 from doscrawler.dumps.tables import dump_table
@@ -18,7 +19,7 @@ from doscrawler.slacks.models import Slack
 from doscrawler.slacks.topics import get_slack_topic
 
 
-@app.agent(change_dump_topic, concurrency=1)
+@app.agent(change_dump_topic, concurrency=settings.DUMP_CONCURRENCY)
 async def change_dumps(dumps):
     """
     Change dumps and dump attacks into files
