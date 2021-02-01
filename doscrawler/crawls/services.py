@@ -20,7 +20,9 @@ from doscrawler.crawls.tables import crawl_table, wait_crawl_table
 @app.timer(settings.CRAWL_GET_WAIT_TIMER, on_leader=True)
 async def get_wait_crawls(self):
     """
-    Get crawls for attacks which are ready to be get crawled
+    Get crawls for attacks which are ready to be get crawled.
+
+    This function triggers by timer with settings.CRAWL_GET_WAIT_TIMER (30s) interval.
 
     :return:
     """
@@ -41,7 +43,9 @@ async def get_wait_crawls(self):
 @app.timer(settings.CRAWL_CLEAN_TIMER, on_leader=True)
 async def clean_crawls(self):
     """
-    Clean crawls which will not be considered anymore
+    Clean crawls which will not be considered anymore.
+
+    This function triggers by timer with settings.CRAWL_CLEAN_TIMER (1 hour) interval.
 
     :return:
     """

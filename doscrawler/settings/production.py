@@ -96,7 +96,8 @@ CRAWL_CACHE_INTERVAL = 900 # 15 minutes
 CRAWL_CLEAN_TIMER = 3600
 
 # dumps
-DUMP_CRON = "0 * * * *" # every hour
+# DUMP_CRON = "0 * * * *" # every hour
+DUMP_CRON = "*/5 * * * *" # every five minutes
 DUMP_DIR = "data/"
 DUMP_COMPRESS_LEVEL = 7
 DUMP_CONCURRENCY = 3

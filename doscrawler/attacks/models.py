@@ -96,6 +96,8 @@ class Attack(Record, coerce=True, serializer="json"):
     @property
     def is_alive(self):
         """
+        DEPRECATED.
+
         Check if attack is still alive in system and is actively followed
 
         :return: [bool] attack is alive

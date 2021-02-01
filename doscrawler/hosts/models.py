@@ -58,7 +58,7 @@ class HostGroup(Record, coerce=True, serializer="json"):
     @staticmethod
     def _get_names(ip):
         """
-        Get names of hosts in host group
+        Get names of hosts in host group. Reverse DNS lookup.
 
         :param ip: [str] IP address used by host group
         :return: [list] host group as list of host names including the IP address itself
