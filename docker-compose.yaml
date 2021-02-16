@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     volumes:
       - doscrawler-data:/data/
     logging:
@@ -16,19 +18,14 @@ services:
       - kafka
       - zookeeper
     environment:
-      - SIMPLE_SETTINGS=doscrawler.settings.production
-      - BROKER=kafka://kafka:9092
-      - BROKER_NAME=kafka
-      - BROKER_PORT=9092
       - WORKER_ID=1
-      - DUMP_DIR=/data/dumps/
-      - SLACK_TOKEN=
-      - SLACK_CHANNEL=
   doscrawler2:
     container_name: doscrawler2
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     volumes:
       - doscrawler-data:/data/
     logging:
@@ -40,19 +37,14 @@ services:
       - kafka
       - zookeeper
     environment:
-      - SIMPLE_SETTINGS=doscrawler.settings.production
-      - BROKER=kafka://kafka:9092
-      - BROKER_NAME=kafka
-      - BROKER_PORT=9092
       - WORKER_ID=2
-      - DUMP_DIR=/data/dumps/
-      - SLACK_TOKEN=
-      - SLACK_CHANNEL=
   doscrawler3:
     container_name: doscrawler3
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     volumes:
       - doscrawler-data:/data/
     logging:
@@ -64,14 +56,7 @@ services:
       - kafka
       - zookeeper
     environment:
-      - SIMPLE_SETTINGS=doscrawler.settings.production
-      - BROKER=kafka://kafka:9092
-      - BROKER_NAME=kafka
-      - BROKER_PORT=9092
       - WORKER_ID=3
-      - DUMP_DIR=/data/dumps/
-      - SLACK_TOKEN=
-      - SLACK_CHANNEL=
   doscrawler4:
     container_name: doscrawler4
     build:
@@ -84,23 +69,20 @@ services:
       options:
         max-size: "5mb"
         max-file: "10"
+    env_file:
+      - .env
     depends_on:
       - kafka
       - zookeeper
     environment:
-      - SIMPLE_SETTINGS=doscrawler.settings.production
-      - BROKER=kafka://kafka:9092
-      - BROKER_NAME=kafka
-      - BROKER_PORT=9092
       - WORKER_ID=4
-      - DUMP_DIR=/data/dumps/
-      - SLACK_TOKEN=
-      - SLACK_CHANNEL=
   doscrawler5:
     container_name: doscrawler5
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     volumes:
       - doscrawler-data:/data/
     logging:
@@ -112,14 +94,7 @@ services:
       - kafka
       - zookeeper
     environment:
-      - SIMPLE_SETTINGS=doscrawler.settings.production
-      - BROKER=kafka://kafka:9092
-      - BROKER_NAME=kafka
-      - BROKER_PORT=9092
       - WORKER_ID=5
-      - DUMP_DIR=/data/dumps/
-      - SLACK_TOKEN=
-      - SLACK_CHANNEL=
   kafka:
     image: wurstmeister/kafka
     hostname: kafka

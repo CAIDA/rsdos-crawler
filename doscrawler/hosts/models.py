@@ -9,13 +9,58 @@ Models
 This module defines the models of the hosts for the DoS crawler.
 
 """
-
+import os
 import socket
 import random
 from typing import List
 from datetime import datetime, timezone, timedelta
+
+import psycopg2
 from simple_settings import settings
 from faust import Record
+
+
+def init_dns_db():
+    cred = {
+        'user': os.environ.get("REVERSE_DNS_DB_USER", None),
+        'password': os.environ.get("REVERSE_DNS_DB_PASSWORD", None),
+        'port': os.environ.get("REVERSE_DNS_DB_PORT", None),
+        'host': os.environ.get("REVERSE_DNS_DB_HOST", None),
+    }
+
+    assert not any(v is None for v in cred.values())
+    return psycopg2.connect(**cred)
+
+
+# DNS database connection
+DNS_DB_CONN = init_dns_db()
+
+
+def get_names_common_crawl(ip):
+    cur = DNS_DB_CONN.cursor()
+    cmd = "SELECT * FROM common_crawl where ip='{}'".format(ip)
+    cur.execute(cmd)
+    return [domain for domain, ip in cur.fetchall()]
+
+
+def get_names_reverse_dns(ip):
+    """
+    Get names of hosts in host group. Reverse DNS lookup.
+
+    :param ip: [str] IP address used by host group
+    :return: [list] host group as list of host names including the IP address itself
+    """
+
+    try:
+        # get hosts
+        hostname, aliaslist, _ = socket.gethostbyaddr(ip)
+        names = list(set([hostname] + aliaslist))
+
+    except socket.herror as e:
+        # return only ip address on address-related errors
+        names = []
+
+    return [n for n in names if n is not None]
 
 
 class HostGroup(Record, coerce=True, serializer="json"):
@@ -26,6 +71,12 @@ class HostGroup(Record, coerce=True, serializer="json"):
     ip: str
     names: List[str]
     time: datetime
+
+    # datasources, order matter
+    DATASOURCES = [
+        ("common_crawl", get_names_common_crawl),
+        ("reverse_dns", get_names_reverse_dns),
+    ]
 
     @classmethod
     async def create_hostgroup_from_ip(cls, ip):
@@ -57,27 +108,22 @@ class HostGroup(Record, coerce=True, serializer="json"):
 
     @staticmethod
     def _get_names(ip):
-        """
-        Get names of hosts in host group. Reverse DNS lookup.
+        names = []
+        for source_name, source_func in HostGroup.DATASOURCES:
+            names = source_func(ip)
+            if names:
+                # use the first datasource that has a match
+                break
 
-        :param ip: [str] IP address used by host group
-        :return: [list] host group as list of host names including the IP address itself
-        """
-
-        try:
-            # get hosts
-            hostname, aliaslist, _ = socket.gethostbyaddr(ip)
-            names = list(set([ip, hostname] + aliaslist))
-
-            if len(names) > settings.HOST_MAX_NUM:
-                # hosts exceed number of maximum hosts
-                # get random seed
-                random.seed(ip)
-                # get random sample of hosts
-                names = random.sample(names, k=settings.HOST_MAX_NUM)
-
-        except socket.herror as e:
-            # return only ip address on address-related errors
+        if not names:
+            # default to use IP has host name
             names = [ip]
+
+        if len(names) > settings.HOST_MAX_NUM:
+            # hosts exceed number of maximum hosts
+            # get random seed
+            random.seed(ip)
+            # get random sample of hosts
+            names = random.sample(names, k=settings.HOST_MAX_NUM)
 
         return names
