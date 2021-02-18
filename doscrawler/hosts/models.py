@@ -43,6 +43,14 @@ def get_names_common_crawl(ip):
     return [domain for domain, ip in cur.fetchall()]
 
 
+def update_lookup_count(ip, source):
+    cur = DNS_DB_CONN.cursor()
+    dt = datetime.now()
+    cmd = f"insert into lookup_count (datetime, ip, datasource) values ('{dt}', '{ip}', '{source}')"
+    cur.execute(cmd)
+    DNS_DB_CONN.commit()
+
+
 def get_names_reverse_dns(ip):
     """
     Get names of hosts in host group. Reverse DNS lookup.
@@ -75,7 +83,7 @@ class HostGroup(Record, coerce=True, serializer="json"):
     # datasources, order matter
     DATASOURCES = [
         ("common_crawl", get_names_common_crawl),
-        ("reverse_dns", get_names_reverse_dns),
+        ("reverse_dns_lookup", get_names_reverse_dns),
     ]
 
     @classmethod
@@ -108,16 +116,20 @@ class HostGroup(Record, coerce=True, serializer="json"):
 
     @staticmethod
     def _get_names(ip):
+        found_source = "none"
         names = []
         for source_name, source_func in HostGroup.DATASOURCES:
             names = source_func(ip)
             if names:
                 # use the first datasource that has a match
+                found_source = source_name
                 break
 
         if not names:
             # default to use IP has host name
             names = [ip]
+
+        update_lookup_count(ip, found_source)
 
         if len(names) > settings.HOST_MAX_NUM:
             # hosts exceed number of maximum hosts
