@@ -9,6 +9,7 @@ Models
 This module defines the models of the hosts for the DoS crawler.
 
 """
+import logging
 import os
 import socket
 import random
@@ -118,10 +119,12 @@ class HostGroup(Record, coerce=True, serializer="json"):
     def _get_names(ip):
         found_source = "none"
         names = []
+        logging.info(f"getting host names for IP: {ip} ...")
         for source_name, source_func in HostGroup.DATASOURCES:
             names = source_func(ip)
             if names:
                 # use the first datasource that has a match
+                logging.info(f"\tfound hostnames using {source_name}: {names}")
                 found_source = source_name
                 break
 
@@ -137,5 +140,7 @@ class HostGroup(Record, coerce=True, serializer="json"):
             random.seed(ip)
             # get random sample of hosts
             names = random.sample(names, k=settings.HOST_MAX_NUM)
+            logging.info(f"\ttoo many hostnames (len>{settings.HOST_MAX_NUM}), reduced to {len(names)}")
 
+        logging.info(f"return mapping of IP {ip} to hostnames {names}")
         return names
