@@ -19,6 +19,7 @@ services:
       - zookeeper
     environment:
       - WORKER_ID=1
+    restart: always
   doscrawler2:
     container_name: doscrawler2
     build:
@@ -38,6 +39,7 @@ services:
       - zookeeper
     environment:
       - WORKER_ID=2
+    restart: always
   doscrawler3:
     container_name: doscrawler3
     build:
@@ -57,6 +59,7 @@ services:
       - zookeeper
     environment:
       - WORKER_ID=3
+    restart: always
   doscrawler4:
     container_name: doscrawler4
     build:
@@ -76,6 +79,7 @@ services:
       - zookeeper
     environment:
       - WORKER_ID=4
+    restart: always
   doscrawler5:
     container_name: doscrawler5
     build:
@@ -95,6 +99,7 @@ services:
       - zookeeper
     environment:
       - WORKER_ID=5
+    restart: always
   kafka:
     image: wurstmeister/kafka
     hostname: kafka
@@ -113,11 +118,13 @@ services:
       - KAFKA_PROCESSING_GUARANTEE=exactly_once
       - KAFKA_NUM_PARTITIONS=5
       - KAFKA_BROKER_ID=1
+    restart: always
   zookeeper:
     image: wurstmeister/zookeeper
     hostname: zookeeper
     ports:
       - "2181:2181"
+    restart: always
   mirrormaker:
     image: ambuds/mirror-maker
     container_name: mirrormaker
@@ -133,6 +140,7 @@ services:
       - DESTINATION=kafka:9092
       - SOURCE=kafka.rogues.caida.org:9392
       - WHITELIST=stardust.rsdos.attacks
+    restart: always
 
 volumes:
   doscrawler-data:
