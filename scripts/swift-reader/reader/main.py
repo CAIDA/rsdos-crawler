@@ -87,7 +87,7 @@ def main():
     opts, _ = parser.parse_known_args()
 
     swift = SwiftUtils(opts.env)
-    of = gzip.open("filtered_attacks.jsonl.gz", "w")
+    of = gzip.open("filtered_attacks.jsonl.gz", "wt")
     for fn in swift.swift_files_generator("data-telescope-meta-dos-crawler"):
         print(fn)
         with wandio.open(f"swift://data-telescope-meta-dos-crawler/{fn}", options=swift.auth_options) as in_file:
@@ -113,8 +113,9 @@ def main():
                     if len(crawls) > 0:
                         print(f"outputting attack with {len(crawls)} good crawls")
                         attack["crawls"] = crawls
-                        of.write(json.dumps(attack) + "\n")
+                        of.write((json.dumps(attack) + "\n").encode())
                         of.flush()
+    of.close()
 
 
 if __name__ == '__main__':
