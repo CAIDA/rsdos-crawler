@@ -113,7 +113,7 @@ def main():
                     if len(crawls) > 0:
                         print(f"outputting attack with {len(crawls)} good crawls")
                         attack["crawls"] = crawls
-                        of.write((json.dumps(attack) + "\n").encode())
+                        of.write(json.dumps(attack) + "\n")
                         of.flush()
     of.close()
 
