@@ -35,3 +35,6 @@ __pycache__/
 # C extensions #
 ################
 *.so
+build
+*egg-info
+dist
