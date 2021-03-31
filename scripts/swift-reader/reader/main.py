@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import gzip
 import ipaddress
 import json
@@ -28,18 +29,29 @@ class SwiftUtils:
         self.swift_service = SwiftService(self.auth_options)
         print(self.auth_options)
 
-    def swift_files_generator(self, container_name):
+    def swift_files_generator(self, container_name, start_ts_str=None):
         """
         Generate swift files in the specified container within start and end time range (inclusive).
         :param container_name:
         :return:
         """
+        start_ts = None
+        if start_ts_str:
+            start_ts = datetime.datetime.strptime(start_ts_str, "%Y%m%d%H%M")
+
         try:
             list_parts_gen = self.swift_service.list(container=container_name)
             for page in list_parts_gen:
                 if page["success"]:
                     for item in page["listing"]:
-                        yield item["name"]
+                        # year=2021/month=02/day=26/data-telescope-crawler-dos-202102260300.json.gz
+                        path = item['name']
+                        if start_ts:
+                            ts_str = path.split("/")[-1].split(".")[0].split("-")[-1]
+                            if datetime.datetime.strptime(ts_str, "%Y%m%d%H%M") >= start_ts:
+                                yield item["name"]
+                        else:
+                            yield item["name"]
                 else:
                     raise page["error"]
         except SwiftError as e:
@@ -84,11 +96,13 @@ def main():
                         help='envfile path',
                         default="/home/limbo/.stardust-creds")
 
+    parser.add_argument('-s', '--start', nargs='?', required=False, help='start timestamp')
+
     opts, _ = parser.parse_known_args()
 
     swift = SwiftUtils(opts.env)
     of = gzip.open("filtered_attacks.jsonl.gz", "wt")
-    for fn in swift.swift_files_generator("data-telescope-meta-dos-crawler"):
+    for fn in swift.swift_files_generator("data-telescope-meta-dos-crawler", opts.start):
         print(fn)
         with wandio.open(f"swift://data-telescope-meta-dos-crawler/{fn}", options=swift.auth_options) as in_file:
             for line in in_file:
