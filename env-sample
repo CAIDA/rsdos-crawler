@@ -1,0 +1,19 @@
+# NOTE
+# must rename it to .env after finishing the config
+# END NOTE
+
+# required
+REVERSE_DNS_DB_PORT=
+REVERSE_DNS_DB_HOST=
+REVERSE_DNS_DB_USER=
+REVERSE_DNS_DB_PASSWORD=
+
+SIMPLE_SETTINGS=doscrawler.settings.production
+BROKER=kafka://kafka:9092
+BROKER_NAME=kafka
+BROKER_PORT=9092
+DUMP_DIR=/data/dumps/
+
+# optional
+SLACK_TOKEN=
+SLACK_CHANNEL=

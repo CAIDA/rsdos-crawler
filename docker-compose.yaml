@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     volumes:
       - doscrawler-data:/data/
     logging:
@@ -16,19 +18,15 @@ services:
       - kafka
       - zookeeper
     environment:
-      - SIMPLE_SETTINGS=doscrawler.settings.production
-      - BROKER=kafka://kafka:9092
-      - BROKER_NAME=kafka
-      - BROKER_PORT=9092
       - WORKER_ID=1
-      - DUMP_DIR=/data/dumps/
-      - SLACK_TOKEN=
-      - SLACK_CHANNEL=
+    restart: always
   doscrawler2:
     container_name: doscrawler2
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     volumes:
       - doscrawler-data:/data/
     logging:
@@ -40,19 +38,15 @@ services:
       - kafka
       - zookeeper
     environment:
-      - SIMPLE_SETTINGS=doscrawler.settings.production
-      - BROKER=kafka://kafka:9092
-      - BROKER_NAME=kafka
-      - BROKER_PORT=9092
       - WORKER_ID=2
-      - DUMP_DIR=/data/dumps/
-      - SLACK_TOKEN=
-      - SLACK_CHANNEL=
+    restart: always
   doscrawler3:
     container_name: doscrawler3
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     volumes:
       - doscrawler-data:/data/
     logging:
@@ -64,14 +58,8 @@ services:
       - kafka
       - zookeeper
     environment:
-      - SIMPLE_SETTINGS=doscrawler.settings.production
-      - BROKER=kafka://kafka:9092
-      - BROKER_NAME=kafka
-      - BROKER_PORT=9092
       - WORKER_ID=3
-      - DUMP_DIR=/data/dumps/
-      - SLACK_TOKEN=
-      - SLACK_CHANNEL=
+    restart: always
   doscrawler4:
     container_name: doscrawler4
     build:
@@ -84,23 +72,21 @@ services:
       options:
         max-size: "5mb"
         max-file: "10"
+    env_file:
+      - .env
     depends_on:
       - kafka
       - zookeeper
     environment:
-      - SIMPLE_SETTINGS=doscrawler.settings.production
-      - BROKER=kafka://kafka:9092
-      - BROKER_NAME=kafka
-      - BROKER_PORT=9092
       - WORKER_ID=4
-      - DUMP_DIR=/data/dumps/
-      - SLACK_TOKEN=
-      - SLACK_CHANNEL=
+    restart: always
   doscrawler5:
     container_name: doscrawler5
     build:
       context: .
       dockerfile: Dockerfile
+    env_file:
+      - .env
     volumes:
       - doscrawler-data:/data/
     logging:
@@ -112,14 +98,8 @@ services:
       - kafka
       - zookeeper
     environment:
-      - SIMPLE_SETTINGS=doscrawler.settings.production
-      - BROKER=kafka://kafka:9092
-      - BROKER_NAME=kafka
-      - BROKER_PORT=9092
       - WORKER_ID=5
-      - DUMP_DIR=/data/dumps/
-      - SLACK_TOKEN=
-      - SLACK_CHANNEL=
+    restart: always
   kafka:
     image: wurstmeister/kafka
     hostname: kafka
@@ -138,11 +118,13 @@ services:
       - KAFKA_PROCESSING_GUARANTEE=exactly_once
       - KAFKA_NUM_PARTITIONS=5
       - KAFKA_BROKER_ID=1
+    restart: always
   zookeeper:
     image: wurstmeister/zookeeper
     hostname: zookeeper
     ports:
       - "2181:2181"
+    restart: always
   mirrormaker:
     image: ambuds/mirror-maker
     container_name: mirrormaker
@@ -158,6 +140,7 @@ services:
       - DESTINATION=kafka:9092
       - SOURCE=kafka.rogues.caida.org:9392
       - WHITELIST=stardust.rsdos.attacks
+    restart: always
 
 volumes:
   doscrawler-data:
